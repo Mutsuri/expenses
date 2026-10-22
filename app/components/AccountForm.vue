@@ -33,13 +33,13 @@ function submit() {
 <template>
   <form @submit.prevent="submit">
     <div class="section-title"><span>ธนาคาร</span></div>
-    <div class="banks">
+    <div class="grid grid-cols-4 gap-2 min-[420px]:grid-cols-5">
       <button
         v-for="b in BANKS"
         :key="b.id"
         type="button"
-        class="bank"
-        :class="{ on: bankId === b.id }"
+        class="flex flex-col items-center gap-1.5 rounded-[14px] border-2 bg-card px-1 py-2.5 text-center text-[11px] leading-[1.3] shadow-card"
+        :class="bankId === b.id ? 'border-accent' : 'border-transparent'"
         @click="bankId = b.id; error = ''"
       >
         <BankLogo :bank-id="b.id" :size="40" />
@@ -57,36 +57,24 @@ function submit() {
         <span>เลขบัญชี 4 ตัวท้าย (ไม่บังคับ)</span>
         <input v-model="last4" class="input" inputmode="numeric" maxlength="4" placeholder="1234">
       </label>
-      <label class="field" style="margin-bottom: 0">
+      <label class="field mb-0">
         <span>ยอดเงินในบัญชีตอนนี้ (บาท)</span>
-        <input v-model="opening" class="input num" inputmode="decimal" placeholder="0.00">
+        <input v-model="opening" class="input tabular-nums" inputmode="decimal" placeholder="0.00">
       </label>
     </div>
 
-    <label class="card check">
-      <input v-model="salary" type="checkbox">
+    <label class="card mt-2.5 flex cursor-pointer items-start gap-3">
+      <input v-model="salary" type="checkbox" class="mt-0.5 size-[22px] flex-none accent-accent">
       <div>
         <b>💼 บัญชีรับเงินเดือน</b>
-        <div class="muted small">
+        <div class="mt-0.5 text-[13px] text-muted">
           ใช้รับเงินเดือน แล้วโอนไปบัญชีอื่นเพื่อใช้จ่าย
           <template v-if="salary && currentSalary"><br>จะเปลี่ยนจาก "{{ currentSalary.name }}" มาเป็นบัญชีนี้</template>
         </div>
       </div>
     </label>
 
-    <p v-if="error" class="error">{{ error }}</p>
-    <button class="btn btn-primary btn-block save" type="submit">บันทึก</button>
+    <p v-if="error" class="mt-3 text-center text-expense">{{ error }}</p>
+    <button class="btn btn-primary btn-block mt-[18px]" type="submit">บันทึก</button>
   </form>
 </template>
-
-<style scoped>
-.banks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.bank { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border: 2px solid transparent; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 11px; line-height: 1.3; text-align: center; }
-.bank.on { border-color: var(--accent); }
-.save { margin-top: 18px; }
-.check { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; cursor: pointer; }
-.check input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
-.small { font-size: 13px; margin-top: 2px; }
-.error { color: var(--expense); text-align: center; margin: 12px 0 0; }
-@media (min-width: 420px) { .banks { grid-template-columns: repeat(5, 1fr); } }
-</style>

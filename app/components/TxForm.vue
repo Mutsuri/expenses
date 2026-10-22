@@ -22,6 +22,15 @@ const date = ref(props.initial?.date ?? todayISO())
 const note = ref(props.initial?.note ?? '')
 const error = ref('')
 
+// แท็บประเภทรายการ (โอนได้เมื่อมีมากกว่าหนึ่งบัญชี)
+const tabs = computed(() =>
+  [
+    { type: 'expense' as const, label: 'รายจ่าย', color: 'text-expense' },
+    { type: 'income' as const, label: 'รายรับ', color: 'text-income' },
+    { type: 'transfer' as const, label: 'โอน', color: 'text-accent' },
+  ].filter((t) => t.type !== 'transfer' || state.accounts.length > 1),
+)
+
 const label = (a: { name: string; bankId: string; salary?: boolean }) => `${a.name} (${bankById(a.bankId).name})${a.salary ? ' 💼' : ''}`
 const targets = computed(() => state.accounts.filter((a) => a.id !== accountId.value))
 
@@ -59,22 +68,44 @@ function submit() {
 
 <template>
   <form @submit.prevent="submit">
-    <div class="seg">
-      <button type="button" :class="{ on: type === 'expense', expense: true }" @click="type = 'expense'">รายจ่าย</button>
-      <button type="button" :class="{ on: type === 'income', income: true }" @click="type = 'income'">รายรับ</button>
-      <button v-if="state.accounts.length > 1" type="button" :class="{ on: type === 'transfer', transfer: true }" @click="type = 'transfer'">โอน</button>
+    <div class="mb-3 grid auto-cols-fr grid-flow-col rounded-[14px] bg-card-2 p-1">
+      <button
+        v-for="t in tabs"
+        :key="t.type"
+        type="button"
+        class="rounded-[10px] p-2.5 font-semibold"
+        :class="type === t.type ? `bg-card shadow-card ${t.color}` : 'text-muted'"
+        @click="type = t.type"
+      >
+        {{ t.label }}
+      </button>
     </div>
 
-    <label class="amount card" :class="type">
-      <span class="baht">฿</span>
-      <input v-model="amount" class="num" inputmode="decimal" placeholder="0.00" autofocus @input="error = ''">
+    <label class="card flex items-center gap-2 px-[18px] py-3.5">
+      <span class="text-[28px] font-semibold text-muted">฿</span>
+      <input
+        v-model="amount"
+        class="min-w-0 flex-1 bg-transparent text-4xl font-bold tabular-nums outline-none"
+        :class="tabs.find((t) => t.type === type)?.color"
+        inputmode="decimal"
+        placeholder="0.00"
+        autofocus
+        @input="error = ''"
+      >
     </label>
 
     <template v-if="type !== 'transfer'">
       <div class="section-title"><span>หมวด</span></div>
-      <div class="cats">
-        <button v-for="c in CATEGORIES[type]" :key="c.id" type="button" class="cat" :class="{ on: category === c.id }" @click="category = c.id">
-          <span class="icon">{{ c.icon }}</span>
+      <div class="grid grid-cols-4 gap-2">
+        <button
+          v-for="c in CATEGORIES[type]"
+          :key="c.id"
+          type="button"
+          class="flex flex-col items-center gap-0.5 rounded-[14px] border-2 bg-card px-1 py-2.5 text-xs shadow-card"
+          :class="category === c.id ? 'border-accent' : 'border-transparent'"
+          @click="category = c.id"
+        >
+          <span class="text-2xl">{{ c.icon }}</span>
           <span>{{ c.name }}</span>
         </button>
       </div>
@@ -98,34 +129,13 @@ function submit() {
         <span>วันที่</span>
         <input v-model="date" type="date" class="input" required>
       </label>
-      <label class="field" style="margin-bottom: 0">
+      <label class="field mb-0">
         <span>บันทึกช่วยจำ</span>
         <input v-model="note" class="input" :placeholder="type === 'transfer' ? 'เช่น ค่าใช้จ่ายเดือนนี้' : 'เช่น ข้าวเที่ยง'">
       </label>
     </div>
 
-    <p v-if="error" class="error">{{ error }}</p>
-    <button class="btn btn-primary btn-block save" type="submit">{{ type === 'transfer' ? 'บันทึกการโอน' : 'บันทึก' }}</button>
+    <p v-if="error" class="mt-3 text-center text-expense">{{ error }}</p>
+    <button class="btn btn-primary btn-block mt-[18px]" type="submit">{{ type === 'transfer' ? 'บันทึกการโอน' : 'บันทึก' }}</button>
   </form>
 </template>
-
-<style scoped>
-.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--card-2); border-radius: 14px; padding: 4px; margin-bottom: 12px; }
-.seg button { border: 0; background: transparent; border-radius: 10px; padding: 10px; font-weight: 600; color: var(--muted); }
-.seg button.on { background: var(--card); box-shadow: var(--shadow); }
-.seg button.on.expense { color: var(--expense); }
-.seg button.on.income { color: var(--income); }
-.seg button.on.transfer { color: var(--accent); }
-.amount { display: flex; align-items: center; gap: 8px; padding: 14px 18px; }
-.baht { font-size: 28px; font-weight: 600; color: var(--muted); }
-.amount input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 36px; font-weight: 700; }
-.amount.expense input { color: var(--expense); }
-.amount.income input { color: var(--income); }
-.amount.transfer input { color: var(--accent); }
-.cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.cat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border: 2px solid transparent; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 12px; }
-.cat .icon { font-size: 24px; }
-.cat.on { border-color: var(--accent); }
-.save { margin-top: 18px; }
-.error { color: var(--expense); text-align: center; margin: 12px 0 0; }
-</style>

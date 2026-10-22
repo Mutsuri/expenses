@@ -1,4 +1,6 @@
 // แอปทำงานในเครื่องทั้งหมด (ไม่มีเซิร์ฟเวอร์) เพื่อขึ้น GitHub Pages ได้
+import tailwindcss from '@tailwindcss/vite'
+
 const base = process.env.NUXT_APP_BASE_URL ?? '/'
 
 export default defineNuxtConfig({
@@ -6,6 +8,7 @@ export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: false },
   css: ['~/assets/main.css'],
+  vite: { plugins: [tailwindcss()] },
   app: {
     baseURL: base,
     head: {

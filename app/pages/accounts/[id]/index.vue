@@ -45,33 +45,47 @@ function pickCycle(key: string) {
 <template>
   <main v-if="account" class="page">
     <TopBar :title="account.name" back="/">
-      <NuxtLink :to="`/accounts/${id}/edit`" class="edit">แก้ไข</NuxtLink>
+      <NuxtLink :to="`/accounts/${id}/edit`" class="p-2 font-semibold text-accent">แก้ไข</NuxtLink>
     </TopBar>
 
-    <section class="head card">
+    <section class="card flex items-center gap-3.5">
       <BankLogo :bank-id="account.bankId" :size="52" />
       <div>
-        <div class="muted small">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
-        <div class="bal num">฿{{ formatMoney(balance) }}</div>
-        <div v-if="account.salary" class="salary">💼 บัญชีรับเงินเดือน</div>
+        <div class="text-[13px] text-muted">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
+        <div class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(balance) }}</div>
+        <div v-if="account.salary" class="mt-0.5 text-xs font-semibold text-accent">💼 บัญชีรับเงินเดือน</div>
       </div>
     </section>
 
-    <div class="tabs">
-      <button :class="{ on: tab === 'list' }" @click="tab = 'list'">รายการ</button>
-      <button :class="{ on: tab === 'stats' }" @click="tab = 'stats'">สถิติ</button>
+    <div class="mt-4 mb-3 grid grid-cols-2 rounded-[14px] bg-card-2 p-1">
+      <button
+        v-for="t in [{ key: 'list', label: 'รายการ' }, { key: 'stats', label: 'สถิติ' }] as const"
+        :key="t.key"
+        class="rounded-[10px] p-2 font-semibold"
+        :class="tab === t.key ? 'bg-card text-ink shadow-card' : 'text-muted'"
+        @click="tab = t.key"
+      >
+        {{ t.label }}
+      </button>
     </div>
 
     <template v-if="tab === 'list'">
       <CycleNav v-model="cycleKey" />
-      <div style="height: 10px" />
+      <div class="h-2.5" />
       <SummaryCard :row="row" />
 
       <div class="section-title">
         <span>แยกตามหมวด</span>
-        <span class="mini-tabs">
-          <button :class="{ on: breakdownType === 'expense' }" @click="breakdownType = 'expense'">จ่าย</button>
-          <button :class="{ on: breakdownType === 'income' }" @click="breakdownType = 'income'">รับ</button>
+        <span class="inline-flex rounded-[10px] bg-card-2 p-0.5">
+          <button
+            v-for="t in [{ key: 'expense', label: 'จ่าย' }, { key: 'income', label: 'รับ' }] as const"
+            :key="t.key"
+            class="rounded-lg px-3 py-0.5 text-[13px] font-semibold"
+            :class="breakdownType === t.key ? 'bg-card text-ink shadow-card' : 'text-muted'"
+            @click="breakdownType = t.key"
+          >
+            {{ t.label }}
+          </button>
         </span>
       </div>
       <CategoryBreakdown :summary="row.summary" :type="breakdownType" />
@@ -85,15 +99,18 @@ function pickCycle(key: string) {
       <CycleChart :rows="history" :selected="cycleKey" @select="pickCycle" />
 
       <div class="section-title"><span>แยกรายรอบ</span></div>
-      <div class="card table">
-        <div class="tr th">
+      <!-- คอลัมน์แรกชิดซ้าย ที่เหลือชิดขวา -->
+      <div
+        class="card divide-y divide-line px-3 py-1 [&>*]:grid [&>*]:w-full [&>*]:grid-cols-[1.1fr_1fr_1fr_1fr] [&>*]:gap-1.5 [&>*]:px-0.5 [&>*]:py-2.5 [&>*]:text-right [&>*>span:first-child]:text-left"
+      >
+        <div class="text-xs text-muted">
           <span>รอบ</span><span>รับ</span><span>จ่าย</span><span>คงเหลือ</span>
         </div>
-        <button v-for="r in history" :key="r.cycle.key" class="tr" @click="pickCycle(r.cycle.key)">
+        <button v-for="r in history" :key="r.cycle.key" class="text-sm" @click="pickCycle(r.cycle.key)">
           <span>{{ formatCycleShort(r.cycle.key) }}</span>
-          <span class="num income">{{ formatMoney(r.summary.income, { short: true }) }}</span>
-          <span class="num expense">{{ formatMoney(r.summary.expense, { short: true }) }}</span>
-          <span class="num">{{ formatMoney(r.summary.closing, { short: true }) }}</span>
+          <span class="tabular-nums text-income">{{ formatMoney(r.summary.income, { short: true }) }}</span>
+          <span class="tabular-nums text-expense">{{ formatMoney(r.summary.expense, { short: true }) }}</span>
+          <span class="tabular-nums">{{ formatMoney(r.summary.closing, { short: true }) }}</span>
         </button>
       </div>
     </template>
@@ -104,21 +121,3 @@ function pickCycle(key: string) {
     <TopBar title="ไม่พบบัญชี" back="/" />
   </main>
 </template>
-
-<style scoped>
-.edit { color: var(--accent); font-weight: 600; padding: 8px; }
-.head { display: flex; align-items: center; gap: 14px; }
-.small { font-size: 13px; }
-.salary { font-size: 12px; font-weight: 600; color: var(--accent); margin-top: 2px; }
-.bal { font-size: 28px; font-weight: 700; line-height: 1.2; }
-.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--card-2); border-radius: 14px; padding: 4px; margin: 16px 0 12px; }
-.tabs button, .mini-tabs button { border: 0; background: transparent; border-radius: 10px; padding: 8px; font-weight: 600; color: var(--muted); }
-.tabs button.on, .mini-tabs button.on { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
-.mini-tabs { display: inline-flex; background: var(--card-2); border-radius: 10px; padding: 2px; }
-.mini-tabs button { padding: 2px 12px; font-size: 13px; border-radius: 8px; }
-.table { padding: 4px 12px; }
-.tr { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 6px; width: 100%; border: 0; background: none; padding: 10px 2px; text-align: right; font-size: 14px; }
-.tr > span:first-child { text-align: left; }
-.tr + .tr { border-top: 1px solid var(--line); }
-.th { font-size: 12px; color: var(--muted); }
-</style>

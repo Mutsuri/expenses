@@ -3,10 +3,10 @@ const { sync, syncByUser } = useSync()
 
 const view = computed(() => {
   if (sync.status === 'off') return null
-  if (sync.status === 'syncing') return { cls: 'busy', icon: '⟳', text: 'กำลัง sync' }
-  if (sync.status === 'error') return { cls: 'bad', icon: '!', text: 'sync ไม่สำเร็จ' }
-  if (sync.pending) return { cls: 'wait', icon: '•', text: 'รอ sync' }
-  return { cls: 'ok', icon: '✓', text: 'sync แล้ว' }
+  if (sync.status === 'syncing') return { cls: 'bg-card text-muted', icon: '⟳', text: 'กำลัง sync', spin: true }
+  if (sync.status === 'error') return { cls: 'bg-expense-soft text-expense', icon: '!', text: 'sync ไม่สำเร็จ', spin: false }
+  if (sync.pending) return { cls: 'bg-card text-muted', icon: '•', text: 'รอ sync', spin: false }
+  return { cls: 'bg-card text-income', icon: '✓', text: 'sync แล้ว', spin: false }
 })
 
 const router = useRouter()
@@ -17,18 +17,14 @@ function tap() {
 </script>
 
 <template>
-  <button v-if="view" class="badge" :class="view.cls" type="button" :title="sync.error || undefined" @click="tap">
-    <span class="icon">{{ view.icon }}</span>{{ view.text }}
+  <button
+    v-if="view"
+    class="inline-flex items-center gap-[5px] rounded-full px-3 py-1.5 text-[13px] font-semibold whitespace-nowrap shadow-card"
+    :class="view.cls"
+    type="button"
+    :title="sync.error || undefined"
+    @click="tap"
+  >
+    <span class="inline-block w-3.5 text-center" :class="{ 'animate-spin motion-reduce:animate-none': view.spin }">{{ view.icon }}</span>{{ view.text }}
   </button>
 </template>
-
-<style scoped>
-.badge { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 600; background: var(--card); box-shadow: var(--shadow); white-space: nowrap; }
-.icon { display: inline-block; width: 14px; text-align: center; }
-.ok { color: var(--income); }
-.wait, .busy { color: var(--muted); }
-.busy .icon { animation: spin 1s linear infinite; }
-.bad { color: var(--expense); background: var(--expense-soft); }
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .busy .icon { animation: none; } }
-</style>

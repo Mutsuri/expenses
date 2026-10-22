@@ -21,9 +21,5 @@ onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <button type="button" :class="{ armed }" @click="tap">{{ armed ? props.confirmLabel : props.label }}</button>
+  <button type="button" :class="{ 'bg-expense! text-white!': armed }" @click="tap">{{ armed ? props.confirmLabel : props.label }}</button>
 </template>
-
-<style scoped>
-.armed { background: var(--expense) !important; color: #fff !important; }
-</style>

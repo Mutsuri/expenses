@@ -19,12 +19,8 @@ function remove() {
     <TopBar title="แก้ไขบัญชี" :back="`/accounts/${id}`" />
     <template v-if="account">
       <AccountForm :initial="account" @save="(v) => { store.updateAccount(id, v); router.replace(`/accounts/${id}`) }" />
-      <ConfirmButton class="btn btn-danger btn-block del" label="ลบบัญชี" :confirm-label="confirmText" @confirm="remove" />
+      <ConfirmButton class="btn btn-danger btn-block mt-2.5" label="ลบบัญชี" :confirm-label="confirmText" @confirm="remove" />
     </template>
-    <p v-else class="muted">ไม่พบบัญชีนี้</p>
+    <p v-else class="text-muted">ไม่พบบัญชีนี้</p>
   </main>
 </template>
-
-<style scoped>
-.del { margin-top: 10px; }
-</style>

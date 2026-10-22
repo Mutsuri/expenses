@@ -15,29 +15,22 @@ const kind = computed<'off' | 'stale' | null>(() => {
 </script>
 
 <template>
-  <section v-if="kind" class="warn card" role="alert">
+  <section v-if="kind" class="card mb-3.5 border-2 border-expense bg-expense-soft" role="alert">
     <template v-if="kind === 'off'">
       <b>⚠️ ยังไม่ได้เชื่อมต่อ Google Sheet</b>
-      <p>ข้อมูลอยู่ในเครื่องนี้อย่างเดียว</p>
-      <div class="actions">
-        <NuxtLink to="/settings" class="btn btn-primary">ไปตั้งค่า</NuxtLink>
+      <p class="mt-1 text-sm">ข้อมูลอยู่ในเครื่องนี้อย่างเดียว</p>
+      <div class="mt-2.5 flex gap-2">
+        <NuxtLink to="/settings" class="btn btn-primary px-3.5 py-2 text-sm">ไปตั้งค่า</NuxtLink>
       </div>
     </template>
     <template v-else>
       <b>⚠️ {{ daysAgo === null ? 'ยังไม่เคย sync กับ Google Sheet' : `ไม่ได้ sync กับ Google Sheet มา ${daysAgo} วันแล้ว` }}</b>
-      <p v-if="sync.error">สาเหตุ: {{ sync.error }}</p>
-      <p v-else>ข้อมูลที่จดช่วงนี้ยังไม่ได้ขึ้นชีต</p>
-      <div class="actions">
-        <button class="btn btn-primary" type="button" @click="syncByUser()">sync ตอนนี้</button>
-        <NuxtLink to="/settings" class="btn">ตั้งค่า</NuxtLink>
+      <p v-if="sync.error" class="mt-1 text-sm">สาเหตุ: {{ sync.error }}</p>
+      <p v-else class="mt-1 text-sm">ข้อมูลที่จดช่วงนี้ยังไม่ได้ขึ้นชีต</p>
+      <div class="mt-2.5 flex gap-2">
+        <button class="btn btn-primary px-3.5 py-2 text-sm" type="button" @click="syncByUser()">sync ตอนนี้</button>
+        <NuxtLink to="/settings" class="btn px-3.5 py-2 text-sm">ตั้งค่า</NuxtLink>
       </div>
     </template>
   </section>
 </template>
-
-<style scoped>
-.warn { margin-bottom: 14px; border: 2px solid var(--expense); background: var(--expense-soft); }
-p { margin: 4px 0 0; font-size: 14px; }
-.actions { display: flex; gap: 8px; margin-top: 10px; }
-.actions .btn { padding: 8px 14px; font-size: 14px; }
-</style>

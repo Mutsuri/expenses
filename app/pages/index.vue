@@ -31,73 +31,54 @@ const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
 
 <template>
   <main class="page">
-    <div class="hello muted">สวัสดี {{ displayName }}</div>
+    <div class="mt-1 -mb-2 text-sm text-muted">สวัสดี {{ displayName }}</div>
     <TopBar title="จดจ่าย">
       <SyncBadge />
-      <NuxtLink to="/settings" class="gear" aria-label="ตั้งค่า">⚙︎</NuxtLink>
+      <NuxtLink to="/settings" class="grid size-10 place-items-center rounded-full bg-card text-xl shadow-card" aria-label="ตั้งค่า">⚙︎</NuxtLink>
     </TopBar>
 
     <SyncWarning />
     <CycleNotice />
 
-    <section class="hero">
-      <div class="hero-label">ยอดเงินรวมทุกบัญชี</div>
-      <div class="hero-total num">฿{{ formatMoney(total) }}</div>
-      <div class="hero-cycle">
+    <section class="rounded-[22px] bg-linear-135 from-[#2f6fed] to-[#6a4ff0] p-[18px] text-white">
+      <div class="text-[13px] opacity-85">ยอดเงินรวมทุกบัญชี</div>
+      <div class="mt-0.5 mb-2 text-[34px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(total) }}</div>
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
         รอบนี้ {{ formatDay(cycle.start) }} – {{ formatDay(cycle.end) }}
-        <span class="pill">{{ paydayText }}</span>
+        <span class="rounded-full bg-white/20 px-2.5 py-px text-[13px] font-semibold">{{ paydayText }}</span>
       </div>
-      <div class="hero-next">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
+      <div class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
     </section>
 
     <div class="section-title">
       <span>บัญชี ({{ accounts.length }})</span>
-      <NuxtLink to="/accounts/new" class="link">+ เพิ่มบัญชี</NuxtLink>
+      <NuxtLink to="/accounts/new" class="font-semibold text-accent">+ เพิ่มบัญชี</NuxtLink>
     </div>
 
-    <div v-if="accounts.length" class="accounts">
-      <NuxtLink v-for="a in accounts" :key="a.id" :to="`/accounts/${a.id}`" class="card acc">
+    <div v-if="accounts.length" class="grid gap-2.5">
+      <NuxtLink v-for="a in accounts" :key="a.id" :to="`/accounts/${a.id}`" class="card flex items-center gap-3">
         <BankLogo :bank-id="a.bankId" />
-        <div class="acc-body">
-          <div class="acc-name">
+        <div class="min-w-0 flex-1">
+          <div class="truncate font-semibold">
             {{ a.name || bankById(a.bankId).name }}
-            <span v-if="a.salary" class="salary">💼 รับเงินเดือน</span>
+            <span
+              v-if="a.salary"
+              class="ml-1 rounded-full bg-card-2 px-2 pt-[3px] pb-0.5 align-[1px] text-[11px] font-semibold whitespace-nowrap text-accent"
+            >
+              💼 รับเงินเดือน
+            </span>
           </div>
-          <div class="muted acc-sub">
+          <div class="text-[13px] text-muted">
             {{ bankById(a.bankId).name }}<template v-if="a.last4"> · •••{{ a.last4 }}</template>
           </div>
         </div>
-        <div class="acc-right">
-          <div class="num acc-bal">{{ formatMoney(a.balance) }}</div>
-        </div>
+        <div class="text-right text-[17px] font-bold tabular-nums">{{ formatMoney(a.balance) }}</div>
       </NuxtLink>
     </div>
-    <NuxtLink v-else to="/accounts/new" class="card empty">
-      <div class="empty-icon">🏦</div>
+    <NuxtLink v-else to="/accounts/new" class="card block px-4 py-7 text-center">
+      <div class="text-[40px]">🏦</div>
       <b>เพิ่มบัญชีแรก</b>
-      <div class="muted">เลือกธนาคาร ตั้งชื่อ แล้วใส่ยอดเงินตอนนี้</div>
+      <div class="text-muted">เลือกธนาคาร ตั้งชื่อ แล้วใส่ยอดเงินตอนนี้</div>
     </NuxtLink>
   </main>
 </template>
-
-<style scoped>
-.hello { font-size: 14px; margin: 4px 0 -8px; }
-.gear { width: 40px; height: 40px; border-radius: 50%; background: var(--card); box-shadow: var(--shadow); display: grid; place-items: center; font-size: 20px; }
-.hero { background: linear-gradient(135deg, #2f6fed, #6a4ff0); color: #fff; border-radius: 22px; padding: 18px; }
-.hero-label { font-size: 13px; opacity: 0.85; }
-.hero-total { font-size: 34px; font-weight: 700; line-height: 1.2; margin: 2px 0 8px; }
-.hero-cycle { font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
-.pill { background: rgb(255 255 255 / 0.2); border-radius: 99px; padding: 1px 10px; font-size: 13px; font-weight: 600; }
-.hero-next { font-size: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / 0.25); opacity: 0.85; }
-.link { color: var(--accent); font-weight: 600; }
-.accounts { display: grid; gap: 10px; }
-.acc { display: flex; align-items: center; gap: 12px; }
-.acc-body { flex: 1; min-width: 0; }
-.acc-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.acc-sub { font-size: 13px; }
-.salary { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--card-2); border-radius: 99px; padding: 3px 8px 2px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
-.acc-right { text-align: right; }
-.acc-bal { font-weight: 700; font-size: 17px; }
-.empty { display: block; text-align: center; padding: 28px 16px; }
-.empty-icon { font-size: 40px; }
-</style>

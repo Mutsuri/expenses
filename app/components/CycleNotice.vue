@@ -43,31 +43,21 @@ const prevLabel = computed(() => formatCycleShort(shiftCycle(current.value.key, 
 </script>
 
 <template>
-  <section v-if="show" class="notice card" role="status">
-    <div class="top">
+  <section v-if="show" class="card mb-3.5 border-2 border-accent" role="status">
+    <div class="flex items-center justify-between gap-2">
       <b>🎉 เริ่มรอบ{{ formatCycleLong(current.key) }} แล้ว</b>
-      <button class="close" type="button" aria-label="ปิด" @click="markSeen">×</button>
+      <button class="px-1 text-[22px] leading-none text-muted" type="button" aria-label="ปิด" @click="markSeen">×</button>
     </div>
-    <p v-if="carried.length">
-      ยกเงินคงเหลือจากรอบ {{ prevLabel }} มาให้แล้ว รวม <b class="num">฿{{ formatMoney(total) }}</b>
+    <p v-if="carried.length" class="mt-1.5 text-[15px]">
+      ยกเงินคงเหลือจากรอบ {{ prevLabel }} มาให้แล้ว รวม <b class="tabular-nums">฿{{ formatMoney(total) }}</b>
     </p>
-    <p v-else>รอบ {{ prevLabel }} ไม่มีเงินคงเหลือให้ยกมา</p>
-    <ul v-if="carried.length > 1">
-      <li v-for="r in carried" :key="r.id">
+    <p v-else class="mt-1.5 text-[15px]">รอบ {{ prevLabel }} ไม่มีเงินคงเหลือให้ยกมา</p>
+    <ul v-if="carried.length > 1" class="mt-2 text-sm">
+      <li v-for="r in carried" :key="r.id" class="flex justify-between py-1 text-muted">
         <span>{{ r.name }}</span>
-        <span class="num">{{ formatMoney(r.amount) }}</span>
+        <span class="tabular-nums">{{ formatMoney(r.amount) }}</span>
       </li>
     </ul>
-    <button class="btn btn-block ok" type="button" @click="markSeen">รับทราบ</button>
+    <button class="btn btn-block mt-3" type="button" @click="markSeen">รับทราบ</button>
   </section>
 </template>
-
-<style scoped>
-.notice { margin-bottom: 14px; border: 2px solid var(--accent); }
-.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.close { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); padding: 0 4px; }
-p { margin: 6px 0 0; font-size: 15px; }
-ul { list-style: none; padding: 0; margin: 8px 0 0; font-size: 14px; }
-li { display: flex; justify-content: space-between; padding: 4px 0; color: var(--muted); }
-.ok { margin-top: 12px; }
-</style>

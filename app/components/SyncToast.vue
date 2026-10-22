@@ -13,27 +13,18 @@ watch(() => sync.doneAt, (at) => {
 </script>
 
 <template>
-  <Transition name="toast">
-    <div v-if="show" class="toast" role="status">✓ sync ขึ้น Google Sheet แล้ว</div>
+  <Transition
+    enter-active-class="transition duration-200"
+    leave-active-class="transition duration-200"
+    enter-from-class="opacity-0 -translate-y-2"
+    leave-to-class="opacity-0 -translate-y-2"
+  >
+    <div
+      v-if="show"
+      class="fixed top-[calc(env(safe-area-inset-top)+12px)] left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm font-semibold whitespace-nowrap text-bg shadow-[0_6px_20px_rgb(0_0_0/0.2)]"
+      role="status"
+    >
+      ✓ sync ขึ้น Google Sheet แล้ว
+    </div>
   </Transition>
 </template>
-
-<style scoped>
-.toast {
-  position: fixed;
-  left: 50%;
-  top: calc(env(safe-area-inset-top) + 12px);
-  transform: translateX(-50%);
-  z-index: 50;
-  background: var(--text);
-  color: var(--bg);
-  border-radius: 99px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
-  white-space: nowrap;
-}
-.toast-enter-active, .toast-leave-active { transition: opacity 0.2s, transform 0.2s; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, -8px); }
-</style>

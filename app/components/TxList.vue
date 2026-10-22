@@ -19,47 +19,40 @@ function view(t: Transaction) {
     const out = t.accountId === props.accountId
     // รับโอนจากบัญชีรับเงินเดือน = เงินเดือน
     if (!out && state.accounts.find((a) => a.id === t.accountId)?.salary) {
-      return { icon: '💼', title: t.note || 'เงินเดือน', sub: `เงินเดือน · จาก ${accountName(t.accountId)}`, cls: 'income' }
+      return { icon: '💼', title: t.note || 'เงินเดือน', sub: `เงินเดือน · จาก ${accountName(t.accountId)}`, color: 'text-income' }
     }
     const label = out ? `โอนไป ${accountName(t.toAccountId)}` : `รับโอนจาก ${accountName(t.accountId)}`
     // รับโอน = รายรับ, โอนออก = รายจ่าย
-    return { icon: '🔁', title: t.note || label, sub: t.note ? label : out ? 'โอนออก (รายจ่าย)' : 'รับโอน (รายรับ)', cls: out ? 'expense' : 'income' }
+    return {
+      icon: '🔁',
+      title: t.note || label,
+      sub: t.note ? label : out ? 'โอนออก (รายจ่าย)' : 'รับโอน (รายรับ)',
+      color: out ? 'text-expense' : 'text-income',
+    }
   }
   const c = categoryById(t.type, t.category)
-  return { icon: c.icon, title: t.note || c.name, sub: c.name, cls: t.type }
+  return { icon: c.icon, title: t.note || c.name, sub: c.name, color: t.type === 'income' ? 'text-income' : 'text-expense' }
 }
 </script>
 
 <template>
-  <div v-if="groups.length" class="list">
+  <div v-if="groups.length">
     <div v-for="g in groups" :key="g.date">
-      <div class="day">
+      <div class="mx-1 mt-4 mb-1.5 flex justify-between text-[13px] text-muted">
         <span>{{ formatWeekday(g.date) }}</span>
-        <span class="num" :class="g.net >= 0 ? 'income' : 'expense'">{{ formatMoney(g.net, { sign: true }) }}</span>
+        <span class="tabular-nums" :class="g.net >= 0 ? 'text-income' : 'text-expense'">{{ formatMoney(g.net, { sign: true }) }}</span>
       </div>
-      <div class="card items">
-        <NuxtLink v-for="t in g.items" :key="t.id" :to="`/tx/${t.id}`" class="item">
-          <span class="icon">{{ view(t).icon }}</span>
-          <div class="body">
-            <div>{{ view(t).title }}</div>
-            <div class="sub muted">{{ view(t).sub }}</div>
+      <div class="card divide-y divide-line px-4 py-1">
+        <NuxtLink v-for="t in g.items" :key="t.id" :to="`/tx/${t.id}`" class="flex items-center gap-3 py-2.5">
+          <span class="grid size-9 flex-none place-items-center rounded-full bg-card-2 text-[22px]">{{ view(t).icon }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="truncate">{{ view(t).title }}</div>
+            <div class="text-[13px] text-muted">{{ view(t).sub }}</div>
           </div>
-          <b class="num" :class="view(t).cls">{{ formatMoney(signedFor(t, accountId), { sign: true }) }}</b>
+          <b class="tabular-nums" :class="view(t).color">{{ formatMoney(signedFor(t, accountId), { sign: true }) }}</b>
         </NuxtLink>
       </div>
     </div>
   </div>
-  <div v-else class="card muted empty">ยังไม่มีรายการในรอบนี้<br>กดปุ่ม + เพื่อจด</div>
+  <div v-else class="card px-4 py-7 text-center text-muted">ยังไม่มีรายการในรอบนี้<br>กดปุ่ม + เพื่อจด</div>
 </template>
-
-<style scoped>
-.day { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin: 16px 4px 6px; }
-.items { padding: 4px 16px; }
-.item { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
-.item + .item { border-top: 1px solid var(--line); }
-.icon { font-size: 22px; width: 36px; height: 36px; display: grid; place-items: center; background: var(--card-2); border-radius: 50%; flex: none; }
-.body { flex: 1; min-width: 0; }
-.body > div:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sub { font-size: 13px; }
-.empty { text-align: center; padding: 28px 16px; }
-</style>

@@ -12,11 +12,12 @@ function submit() {
 </script>
 
 <template>
-  <main class="page login">
-    <div class="brand">
-      <img class="logo" :src="`${base}icon-192.png`" alt="" width="72" height="72">
-      <h1>จดจ่าย</h1>
-      <p class="muted">จดรายรับ – รายจ่ายแยกตามบัญชี</p>
+  <main class="page flex min-h-dvh flex-col justify-center pb-[20vh]">
+    <div class="mb-6 text-center">
+      <!-- รูปเดียวกับไอคอนบนหน้าจอโฮม -->
+      <img class="mx-auto mb-3 block size-[72px] rounded-[22px]" :src="`${base}icon-192.png`" alt="" width="72" height="72">
+      <h1 class="text-[28px] font-bold">จดจ่าย</h1>
+      <p class="mt-1 text-muted">จดรายรับ – รายจ่ายแยกตามบัญชี</p>
     </div>
 
     <form class="card" @submit.prevent="submit">
@@ -33,19 +34,8 @@ function submit() {
           @input="error = ''"
         >
       </label>
-      <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="error" class="mx-1 -mt-1 mb-3 text-sm text-expense">{{ error }}</p>
       <button class="btn btn-primary btn-block" type="submit" :disabled="!name.trim()">เข้าสู่ระบบ</button>
     </form>
   </main>
 </template>
-
-<style scoped>
-.login { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding-bottom: 20vh; }
-.brand { text-align: center; margin-bottom: 24px; }
-/* รูปเดียวกับไอคอนบนหน้าจอโฮม */
-.logo { width: 72px; height: 72px; margin: 0 auto 12px; border-radius: 22px; display: block; }
-h1 { margin: 0; font-size: 28px; }
-.brand p { margin: 4px 0 0; }
-.error { color: var(--expense); margin: -4px 4px 12px; font-size: 14px; }
-.btn:disabled { opacity: 0.5; }
-</style>

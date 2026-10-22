@@ -16,12 +16,8 @@ function remove() {
     <TopBar title="แก้ไขรายการ" back />
     <template v-if="tx">
       <TxForm :initial="tx" @save="(v) => { store.updateTransaction(id, v); router.back() }" />
-      <ConfirmButton class="btn btn-danger btn-block del" label="ลบรายการ" confirm-label="แตะอีกครั้งเพื่อลบ" @confirm="remove" />
+      <ConfirmButton class="btn btn-danger btn-block mt-2.5" label="ลบรายการ" confirm-label="แตะอีกครั้งเพื่อลบ" @confirm="remove" />
     </template>
-    <p v-else class="muted">ไม่พบรายการนี้</p>
+    <p v-else class="text-muted">ไม่พบรายการนี้</p>
   </main>
 </template>
-
-<style scoped>
-.del { margin-top: 10px; }
-</style>

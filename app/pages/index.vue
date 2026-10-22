@@ -37,6 +37,7 @@ const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
       <NuxtLink to="/settings" class="gear" aria-label="ตั้งค่า">⚙︎</NuxtLink>
     </TopBar>
 
+    <SyncWarning />
     <CycleNotice />
 
     <section class="hero">

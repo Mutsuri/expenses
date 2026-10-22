@@ -12,7 +12,8 @@ const base = useRuntimeConfig().app.baseURL
     class="grid flex-none place-items-center overflow-hidden rounded-[26%]"
     :style="{ width: `${size}px`, height: `${size}px`, background: bank.color, fontSize: `${size * 0.5}px` }"
   >
-    <img v-if="bank.logo" class="block size-full" :src="`${base}banks/${bank.id}.svg`" :alt="bank.name">
+    <!-- สัญลักษณ์ในไฟล์เต็มกรอบ ย่อให้มีขอบเหมือนภาพตัวอย่างของ omise/banks-logo -->
+    <img v-if="bank.logo" class="block size-[78%]" :src="`${base}banks/${bank.id}.svg`" :alt="bank.name">
     <template v-else>{{ bank.id === 'cash' ? '💵' : '👛' }}</template>
   </span>
 </template>

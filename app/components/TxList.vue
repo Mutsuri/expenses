@@ -14,19 +14,21 @@ const accountName = (id?: string) => {
   return a ? a.name || bankById(a.bankId).name : 'บัญชีที่ลบไปแล้ว'
 }
 
-function view(t: Transaction) {
+// sub = ข้อความบรรทัดล่าง, peer = ชื่อบัญชีอีกฝั่งของการโอน (ต่อท้าย sub)
+function view(t: Transaction): { icon: string; title: string; sub: string; peer?: string; color: string } {
   if (t.type === 'transfer') {
     const out = t.accountId === props.accountId
+    const peer = accountName(out ? t.toAccountId : t.accountId)
     // รับโอนจากบัญชีรับเงินเดือน = เงินเดือน
     if (!out && state.accounts.find((a) => a.id === t.accountId)?.salary) {
-      return { icon: '💼', title: t.note || 'เงินเดือน', sub: `เงินเดือน · จาก ${accountName(t.accountId)}`, color: 'text-income' }
+      return { icon: '💼', title: t.note || 'เงินเดือน', sub: 'เงินเดือน · จาก', peer, color: 'text-income' }
     }
-    const label = out ? `โอนไป ${accountName(t.toAccountId)}` : `รับโอนจาก ${accountName(t.accountId)}`
     // รับโอน = รายรับ, โอนออก = รายจ่าย
     return {
       icon: '🔁',
-      title: t.note || label,
-      sub: t.note ? label : out ? 'โอนออก (รายจ่าย)' : 'รับโอน (รายรับ)',
+      title: t.note || (out ? `โอนไป ${peer}` : `รับโอนจาก ${peer}`),
+      sub: out ? 'โอนออก · ไป' : 'รับโอน · จาก',
+      peer,
       color: out ? 'text-expense' : 'text-income',
     }
   }
@@ -47,7 +49,10 @@ function view(t: Transaction) {
           <span class="grid size-9 flex-none place-items-center rounded-full bg-card-2 text-[22px]">{{ view(t).icon }}</span>
           <div class="min-w-0 flex-1">
             <div class="truncate">{{ view(t).title }}</div>
-            <div class="text-[13px] text-muted">{{ view(t).sub }}</div>
+            <div class="flex items-center gap-1 text-[13px] text-muted">
+              <span>{{ view(t).sub }}</span>
+              <span v-if="view(t).peer" class="truncate">{{ view(t).peer }}</span>
+            </div>
           </div>
           <b class="tabular-nums" :class="view(t).color">{{ formatMoney(signedFor(t, accountId), { sign: true }) }}</b>
         </NuxtLink>

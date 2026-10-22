@@ -6,6 +6,8 @@ import { formatCycleShort, formatMoney } from '#shared/utils/format'
 const props = defineProps<{ row: CycleRow }>()
 const { state } = useStore()
 const prevLabel = computed(() => formatCycleShort(shiftCycle(props.row.cycle.key, -1, state.settings).key))
+// เงินเข้าทั้งหมดของรอบ: ยกมา + ยอดเริ่มต้นบัญชี (รอบแรก) + รายรับ
+const totalIn = computed(() => props.row.carriedIn + props.row.starting + props.row.summary.income)
 </script>
 
 <template>
@@ -24,13 +26,14 @@ const prevLabel = computed(() => formatCycleShort(shiftCycle(props.row.cycle.key
       <span>ยกมาจากรอบ {{ prevLabel }}</span>
       <span class="num">{{ formatMoney(row.carriedIn) }}</span>
     </div>
-    <div v-if="row.starting" class="line">
-      <span>ยอดเริ่มต้นบัญชี</span>
-      <span class="num">{{ formatMoney(row.starting) }}</span>
+    <!-- รายรับทั้งหมด − รายจ่ายทั้งหมด = คงเหลือ -->
+    <div class="line">
+      <span>รายรับทั้งหมด</span>
+      <span class="num income">{{ formatMoney(totalIn) }}</span>
     </div>
     <div class="line">
-      <span>รับ − จ่าย รอบนี้</span>
-      <b class="num" :class="row.summary.net >= 0 ? 'income' : 'expense'">{{ formatMoney(row.summary.net, { sign: true }) }}</b>
+      <span>รายจ่ายทั้งหมด</span>
+      <span class="num expense">{{ formatMoney(row.summary.expense) }}</span>
     </div>
     <div class="line strong">
       <span>คงเหลือ</span>

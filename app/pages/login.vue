@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { login } = useAuth()
 const router = useRouter()
+const base = useRuntimeConfig().app.baseURL
 const name = ref('')
 const error = ref('')
 
@@ -13,7 +14,7 @@ function submit() {
 <template>
   <main class="page login">
     <div class="brand">
-      <div class="logo">฿</div>
+      <img class="logo" :src="`${base}icon-192.png`" alt="" width="72" height="72">
       <h1>จดจ่าย</h1>
       <p class="muted">จดรายรับ – รายจ่ายแยกตามบัญชี</p>
     </div>
@@ -41,7 +42,8 @@ function submit() {
 <style scoped>
 .login { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding-bottom: 20vh; }
 .brand { text-align: center; margin-bottom: 24px; }
-.logo { width: 72px; height: 72px; margin: 0 auto 12px; border-radius: 22px; background: linear-gradient(135deg, #2f6fed, #6a4ff0); color: #fff; font-size: 38px; font-weight: 700; display: grid; place-items: center; }
+/* รูปเดียวกับไอคอนบนหน้าจอโฮม */
+.logo { width: 72px; height: 72px; margin: 0 auto 12px; border-radius: 22px; display: block; }
 h1 { margin: 0; font-size: 28px; }
 .brand p { margin: 4px 0 0; }
 .error { color: var(--expense); margin: -4px 4px 12px; font-size: 14px; }

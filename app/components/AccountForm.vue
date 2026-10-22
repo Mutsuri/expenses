@@ -10,6 +10,10 @@ const bankId = ref(props.initial?.bankId ?? '')
 const name = ref(props.initial?.name ?? '')
 const last4 = ref(props.initial?.last4 ?? '')
 const opening = ref(props.initial ? formatMoney(props.initial.openingBalance).replace(/,/g, '') : '')
+const { state } = useStore()
+// บัญชีแรกตั้งเป็นบัญชีรับเงินเดือนไว้ก่อน
+const salary = ref(props.initial?.salary ?? !state.accounts.some((a) => a.salary))
+const currentSalary = computed(() => state.accounts.find((a) => a.salary && a.id !== props.initial?.id))
 const error = ref('')
 
 function submit() {
@@ -21,6 +25,7 @@ function submit() {
     name: name.value.trim() || bankById(bankId.value).name,
     last4: last4.value.replace(/\D/g, '').slice(-4),
     openingBalance: amount,
+    salary: salary.value,
   })
 }
 </script>
@@ -58,6 +63,17 @@ function submit() {
       </label>
     </div>
 
+    <label class="card check">
+      <input v-model="salary" type="checkbox">
+      <div>
+        <b>💼 บัญชีรับเงินเดือน</b>
+        <div class="muted small">
+          ใช้รับเงินเดือน แล้วโอนไปบัญชีอื่นเพื่อใช้จ่าย
+          <template v-if="salary && currentSalary"><br>จะเปลี่ยนจาก "{{ currentSalary.name }}" มาเป็นบัญชีนี้</template>
+        </div>
+      </div>
+    </label>
+
     <p v-if="error" class="error">{{ error }}</p>
     <button class="btn btn-primary btn-block save" type="submit">บันทึก</button>
   </form>
@@ -68,6 +84,9 @@ function submit() {
 .bank { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border: 2px solid transparent; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 11px; line-height: 1.3; text-align: center; }
 .bank.on { border-color: var(--accent); }
 .save { margin-top: 18px; }
+.check { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; cursor: pointer; }
+.check input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+.small { font-size: 13px; margin-top: 2px; }
 .error { color: var(--expense); text-align: center; margin: 12px 0 0; }
 @media (min-width: 420px) { .banks { grid-template-columns: repeat(5, 1fr); } }
 </style>

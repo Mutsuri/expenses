@@ -44,8 +44,44 @@ describe('stats', () => {
   })
 
   it('groups by day, newest first', () => {
-    const g = groupByDay(txs.slice(0, 3))
+    const g = groupByDay(txs.slice(0, 3), 'a')
     expect(g.map((d) => d.date)).toEqual(['2026-10-23', '2026-10-22'])
     expect(g[0]!.net).toBe(-200_00)
+  })
+})
+
+describe('transfers', () => {
+  const b: Account = { ...acc, id: 'b', openingBalance: 0 }
+  const txs = [
+    tx({ type: 'income', amount: 30000_00, category: 'salary' }),
+    tx({ type: 'transfer', amount: 5000_00, category: 'transfer', toAccountId: 'b' }),
+    tx({ accountId: 'b', amount: 300_00 }),
+  ]
+
+  it('moves money between accounts without changing the total', () => {
+    expect(balanceOf(acc, txs)).toBe(100_00 + 30000_00 - 5000_00)
+    expect(balanceOf(b, txs)).toBe(5000_00 - 300_00)
+  })
+
+  it('counts money received as income and money sent as expense', () => {
+    const fromA = summarize(txs, 0, 'a')
+    expect(fromA.income).toBe(30000_00)
+    expect(fromA.expense).toBe(5000_00)
+    expect(fromA.byCategory.map((c) => c.category)).toEqual(['salary', 'transfer-out'])
+    const toB = summarize(txs, 0, 'b')
+    expect(toB.income).toBe(5000_00)
+    expect(toB.expense).toBe(300_00)
+    expect(toB.byCategory.map((c) => c.category)).toEqual(['transfer-in', 'food'])
+  })
+
+  it('files money from the salary account under salary', () => {
+    const toB = summarize(txs, 0, 'b', new Set(['a']))
+    expect(toB.income).toBe(5000_00)
+    expect(toB.byCategory.map((c) => c.category)).toEqual(['salary', 'food'])
+  })
+
+  it('shows the daily net from each side', () => {
+    expect(groupByDay(txs, 'a')[0]!.net).toBe(25000_00)
+    expect(groupByDay(txs, 'b')[0]!.net).toBe(4700_00)
   })
 })

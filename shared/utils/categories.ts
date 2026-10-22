@@ -27,7 +27,16 @@ export const CATEGORIES: Record<TxType, Category[]> = {
   ],
 }
 
+/** หมวดของเงินที่โอนระหว่างบัญชี (ไม่มีให้เลือกในฟอร์ม) */
+export const TRANSFER_IN = 'transfer-in'
+export const TRANSFER_OUT = 'transfer-out'
+const TRANSFER_CATEGORIES: Record<string, Category> = {
+  [TRANSFER_IN]: { id: TRANSFER_IN, name: 'รับโอน', icon: '🔁' },
+  [TRANSFER_OUT]: { id: TRANSFER_OUT, name: 'โอนออก', icon: '🔁' },
+}
+
 export function categoryById(type: TxType, id: string): Category {
+  if (TRANSFER_CATEGORIES[id]) return TRANSFER_CATEGORIES[id]
   const list = CATEGORIES[type]
   return list.find((c) => c.id === id) ?? list[list.length - 1]!
 }

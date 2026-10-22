@@ -2,13 +2,15 @@
 // ตั้งรหัสลับที่ การตั้งค่าโปรเจกต์ → พร็อพเพอร์ตี้ของสคริปต์ ชื่อ SECRET
 // แล้ว Deploy → การทำให้ใช้งานได้รายการใหม่ → เว็บแอป (ดำเนินการในฐานะ: ฉัน, ผู้มีสิทธิ์เข้าถึง: ทุกคน)
 
+// คอลัมน์ใหม่ต่อท้ายเสมอ ข้อมูลเก่าในชีตจะได้ไม่เลื่อนช่อง
 const SHEETS = {
-  accounts: ['id', 'bankId', 'name', 'last4', 'openingBalance', 'createdAt', 'updatedAt', 'deleted'],
-  transactions: ['id', 'date', 'accountId', 'type', 'category', 'amount', 'note', 'createdAt', 'updatedAt', 'deleted'],
+  accounts: ['id', 'bankId', 'name', 'last4', 'openingBalance', 'createdAt', 'updatedAt', 'deleted', 'salary'],
+  transactions: ['id', 'date', 'accountId', 'type', 'category', 'amount', 'note', 'createdAt', 'updatedAt', 'deleted', 'toAccountId'],
 }
 // ในชีตเก็บเป็นบาท ในแอปเก็บเป็นสตางค์
 const MONEY = ['openingBalance', 'amount']
 const NUMBERS = ['createdAt', 'updatedAt']
+const BOOLEANS = ['deleted', 'salary']
 
 function doGet() {
   return json({ ok: true, app: 'จดจ่าย' })
@@ -91,10 +93,9 @@ function mergeSettings(ss, incoming) {
 function getSheet(ss, name, cols) {
   let sheet = ss.getSheetByName(name)
   if (!sheet) sheet = ss.insertSheet(name)
-  if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold')
-    sheet.setFrozenRows(1)
-  }
+  // เขียนหัวตารางทุกครั้ง เผื่อมีคอลัมน์ใหม่
+  sheet.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold')
+  sheet.setFrozenRows(1)
   return sheet
 }
 
@@ -106,14 +107,14 @@ function formatOf(col) {
 
 function toCell(col, v) {
   if (MONEY.includes(col)) return (Number(v) || 0) / 100
-  if (col === 'deleted') return v ? 'TRUE' : ''
+  if (BOOLEANS.includes(col)) return v ? 'TRUE' : ''
   return v === undefined || v === null ? '' : v
 }
 
 function fromCell(col, v, tz) {
   if (MONEY.includes(col)) return Math.round(Number(v || 0) * 100)
   if (NUMBERS.includes(col)) return Number(v) || 0
-  if (col === 'deleted') return v === true || v === 'TRUE'
+  if (BOOLEANS.includes(col)) return v === true || v === 'TRUE'
   if (v instanceof Date) return Utilities.formatDate(v, tz, 'yyyy-MM-dd')
   return String(v)
 }

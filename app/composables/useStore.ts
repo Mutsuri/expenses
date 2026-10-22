@@ -1,7 +1,7 @@
 // ข้อมูลทั้งหมดเก็บใน IndexedDB ของเครื่อง แล้ว sync กับ Google Sheet ผ่าน useSync
 import { get, set } from 'idb-keyval'
 import { DEFAULT_HOLIDAYS } from '#shared/utils/holidays'
-import type { Account, Transaction } from '#shared/utils/stats'
+import { involves, type Account, type Transaction } from '#shared/utils/stats'
 import { mergeRemote, mergeSettings, type Settings, type SyncResponse, type Tombstone } from '#shared/utils/sync'
 
 interface State {
@@ -62,6 +62,13 @@ function bury(kind: Tombstone['kind'], ids: string[]) {
   state.tombstones = [...state.tombstones.filter((t) => !ids.includes(t.id)), ...ids.map((id) => ({ kind, id, updatedAt: now }))]
 }
 
+/** บัญชีรับเงินเดือนมีได้บัญชีเดียว */
+function clearSalary(exceptId: string, now: number) {
+  for (const a of state.accounts) {
+    if (a.salary && a.id !== exceptId) Object.assign(a, { salary: false, updatedAt: now })
+  }
+}
+
 function touchSettings() {
   state.settings.updatedAt = Date.now()
   onLocalChange()
@@ -77,6 +84,7 @@ export function useStore() {
     addAccount(a: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>): string {
       const id = newId()
       const now = Date.now()
+      if (a.salary) clearSalary(id, now)
       state.accounts.push({ ...a, id, createdAt: now, updatedAt: now })
       onLocalChange()
       return id
@@ -84,13 +92,15 @@ export function useStore() {
     updateAccount(id: string, patch: Partial<Omit<Account, 'id'>>) {
       const a = state.accounts.find((x) => x.id === id)
       if (!a) return
-      Object.assign(a, patch, { updatedAt: Date.now() })
+      const now = Date.now()
+      if (patch.salary) clearSalary(id, now)
+      Object.assign(a, patch, { updatedAt: now })
       onLocalChange()
     },
     removeAccount(id: string) {
-      const txIds = state.transactions.filter((t) => t.accountId === id).map((t) => t.id)
+      const txIds = state.transactions.filter((t) => involves(t, id)).map((t) => t.id)
       state.accounts = state.accounts.filter((a) => a.id !== id)
-      state.transactions = state.transactions.filter((t) => t.accountId !== id)
+      state.transactions = state.transactions.filter((t) => !involves(t, id))
       bury('account', [id])
       bury('transaction', txIds)
       onLocalChange()

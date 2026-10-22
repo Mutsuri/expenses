@@ -2,7 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { cycleOf, cycleTodayISO, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
-import { balanceOf, inCycle, summarize } from '#shared/utils/stats'
+import { balanceOf, involves } from '#shared/utils/stats'
 
 const { state } = useStore()
 const { displayName } = useAuth()
@@ -17,11 +17,14 @@ const paydayText = computed(() => {
   return days === 0 ? 'เงินเดือนเข้าตี 3 วันนี้' : `อีก ${days} วันเงินเดือนออก`
 })
 
+// บัญชีรับเงินเดือนขึ้นก่อน
 const accounts = computed(() =>
-  state.accounts.map((a) => {
-    const txs = state.transactions.filter((t) => t.accountId === a.id)
-    return { ...a, balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0) }
-  }),
+  [...state.accounts]
+    .sort((a, b) => Number(!!b.salary) - Number(!!a.salary))
+    .map((a) => {
+      const txs = state.transactions.filter((t) => involves(t, a.id))
+      return { ...a, balance: balanceOf(a, txs) }
+    }),
 )
 const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
 </script>
@@ -55,14 +58,16 @@ const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
       <NuxtLink v-for="a in accounts" :key="a.id" :to="`/accounts/${a.id}`" class="card acc">
         <BankLogo :bank-id="a.bankId" />
         <div class="acc-body">
-          <div class="acc-name">{{ a.name || bankById(a.bankId).name }}</div>
+          <div class="acc-name">
+            {{ a.name || bankById(a.bankId).name }}
+            <span v-if="a.salary" class="salary">💼 รับเงินเดือน</span>
+          </div>
           <div class="muted acc-sub">
             {{ bankById(a.bankId).name }}<template v-if="a.last4"> · •••{{ a.last4 }}</template>
           </div>
         </div>
         <div class="acc-right">
           <div class="num acc-bal">{{ formatMoney(a.balance) }}</div>
-          <div v-if="a.cycle.expense" class="num acc-sub expense">จ่ายรอบนี้ {{ formatMoney(a.cycle.expense, { short: true }) }}</div>
         </div>
       </NuxtLink>
     </div>
@@ -89,6 +94,7 @@ const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
 .acc-body { flex: 1; min-width: 0; }
 .acc-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acc-sub { font-size: 13px; }
+.salary { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--card-2); border-radius: 99px; padding: 3px 8px 2px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
 .acc-right { text-align: right; }
 .acc-bal { font-weight: 700; font-size: 17px; }
 .empty { display: block; text-align: center; padding: 28px 16px; }

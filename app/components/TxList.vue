@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import { bankById } from '#shared/utils/banks'
 import { categoryById } from '#shared/utils/categories'
 import { formatMoney, formatWeekday } from '#shared/utils/format'
 import { groupByDay, type Transaction } from '#shared/utils/stats'
 
-const props = defineProps<{ items: Transaction[]; showAccount?: boolean }>()
-const { state } = useStore()
+const props = defineProps<{ items: Transaction[] }>()
 const groups = computed(() => groupByDay(props.items))
-const accountName = (id: string) => {
-  const a = state.accounts.find((x) => x.id === id)
-  return a ? a.name || bankById(a.bankId).name : ''
-}
 </script>
 
 <template>
@@ -25,9 +19,7 @@ const accountName = (id: string) => {
           <span class="icon">{{ categoryById(t.type, t.category).icon }}</span>
           <div class="body">
             <div>{{ t.note || categoryById(t.type, t.category).name }}</div>
-            <div class="sub muted">
-              {{ categoryById(t.type, t.category).name }}<template v-if="showAccount"> · {{ accountName(t.accountId) }}</template>
-            </div>
+            <div class="sub muted">{{ categoryById(t.type, t.category).name }}</div>
           </div>
           <b class="num" :class="t.type">{{ t.type === 'income' ? '+' : '-' }}{{ formatMoney(t.amount) }}</b>
         </NuxtLink>

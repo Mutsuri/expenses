@@ -19,7 +19,6 @@ const accounts = computed(() =>
 )
 const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
 const overall = computed(() => summarize(inCycle(state.transactions, cycle.value), 0))
-const recent = computed(() => inCycle(state.transactions, cycle.value))
 </script>
 
 <template>
@@ -74,11 +73,7 @@ const recent = computed(() => inCycle(state.transactions, cycle.value))
       <div class="muted">เลือกธนาคาร ตั้งชื่อ แล้วใส่ยอดเงินตอนนี้</div>
     </NuxtLink>
 
-    <template v-if="accounts.length">
-      <div class="section-title"><span>รายการรอบนี้</span></div>
-      <TxList :items="recent" show-account />
-      <NuxtLink to="/tx/new" class="fab" aria-label="จดรายการ">+</NuxtLink>
-    </template>
+    <NuxtLink v-if="accounts.length" to="/tx/new" class="fab" aria-label="จดรายการ">+</NuxtLink>
   </main>
 </template>
 

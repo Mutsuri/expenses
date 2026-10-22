@@ -10,6 +10,8 @@ export interface Account {
   /** ยอดเงินตอนเริ่มใช้แอป (สตางค์) */
   openingBalance: number
   createdAt: number
+  /** เวลาแก้ไขล่าสุด ใช้ตัดสินตอน sync */
+  updatedAt: number
 }
 
 export interface Transaction {
@@ -22,6 +24,7 @@ export interface Transaction {
   date: string
   note: string
   createdAt: number
+  updatedAt: number
 }
 
 export interface CycleSummary {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { bankById } from '#shared/utils/banks'
-import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
+import { accountCycles, type CycleRow } from '#shared/utils/history'
+import { cycleOf, shiftCycle, cycleTodayISO } from '#shared/utils/cycle'
 import { formatCycleShort, formatMoney } from '#shared/utils/format'
-import { balanceOf, inCycle } from '#shared/utils/stats'
-import { accountHistory, cycleRow } from '~/utils/history'
+import { balanceOf, inCycle, summarize } from '#shared/utils/stats'
 
 const { state } = useStore()
 const route = useRoute()
@@ -14,15 +14,26 @@ const bank = computed(() => bankById(account.value?.bankId ?? 'other'))
 const txs = computed(() => state.transactions.filter((t) => t.accountId === id))
 
 const tab = ref<'list' | 'stats'>(route.query.tab === 'stats' ? 'stats' : 'list')
-const cycleKey = ref(cycleOf(todayISO(), state.settings).key)
+const cycleKey = ref(cycleOf(cycleTodayISO(), state.settings).key)
 const cycle = computed(() => shiftCycle(cycleKey.value, 0, state.settings))
 
 const balance = computed(() => (account.value ? balanceOf(account.value, txs.value) : 0))
-const row = computed(() => (account.value ? cycleRow(account.value, txs.value, cycle.value) : null))
 const cycleTxs = computed(() => inCycle(txs.value, cycle.value))
 const breakdownType = ref<'expense' | 'income'>('expense')
 
-const history = computed(() => (account.value ? accountHistory(account.value, state.transactions, state.settings) : []))
+const history = computed(() =>
+  account.value ? accountCycles(account.value, state.transactions, state.settings, cycleTodayISO()) : [],
+)
+// รอบก่อนเปิดบัญชีไม่มีข้อมูล แสดงเป็นศูนย์
+const row = computed<CycleRow>(
+  () =>
+    history.value.find((r) => r.cycle.key === cycleKey.value) ?? {
+      cycle: cycle.value,
+      carriedIn: 0,
+      starting: 0,
+      summary: summarize([], 0),
+    },
+)
 const avg = computed(() => {
   // เฉลี่ยจากรอบที่จบแล้วเท่านั้น
   const done = history.value.slice(1).filter((r) => r.summary.income || r.summary.expense)
@@ -61,10 +72,10 @@ function pickCycle(key: string) {
       <button :class="{ on: tab === 'stats' }" @click="tab = 'stats'">สถิติ</button>
     </div>
 
-    <template v-if="tab === 'list' && row">
+    <template v-if="tab === 'list'">
       <CycleNav v-model="cycleKey" />
       <div style="height: 10px" />
-      <SummaryCard :summary="row.summary" :opening="row.opening" />
+      <SummaryCard :row="row" />
 
       <div class="section-title">
         <span>แยกตามหมวด</span>

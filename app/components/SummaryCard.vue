@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { formatMoney } from '#shared/utils/format'
-import type { CycleSummary } from '#shared/utils/stats'
+import type { CycleRow } from '#shared/utils/history'
+import { shiftCycle } from '#shared/utils/cycle'
+import { formatCycleShort, formatMoney } from '#shared/utils/format'
 
-defineProps<{ summary: CycleSummary; opening?: number }>()
+const props = defineProps<{ row: CycleRow }>()
+const { state } = useStore()
+const prevLabel = computed(() => formatCycleShort(shiftCycle(props.row.cycle.key, -1, state.settings).key))
 </script>
 
 <template>
@@ -10,27 +13,29 @@ defineProps<{ summary: CycleSummary; opening?: number }>()
     <div class="row two">
       <div class="box in">
         <div class="label">รายรับ</div>
-        <div class="val num income">{{ formatMoney(summary.income) }}</div>
+        <div class="val num income">{{ formatMoney(row.summary.income) }}</div>
       </div>
       <div class="box out">
         <div class="label">รายจ่าย</div>
-        <div class="val num expense">{{ formatMoney(summary.expense) }}</div>
+        <div class="val num expense">{{ formatMoney(row.summary.expense) }}</div>
       </div>
+    </div>
+    <div v-if="row.carriedIn" class="line">
+      <span>ยกมาจากรอบ {{ prevLabel }}</span>
+      <span class="num">{{ formatMoney(row.carriedIn) }}</span>
+    </div>
+    <div v-if="row.starting" class="line">
+      <span>ยอดเริ่มต้นบัญชี</span>
+      <span class="num">{{ formatMoney(row.starting) }}</span>
     </div>
     <div class="line">
       <span>รับ − จ่าย รอบนี้</span>
-      <b class="num" :class="summary.net >= 0 ? 'income' : 'expense'">{{ formatMoney(summary.net, { sign: true }) }}</b>
+      <b class="num" :class="row.summary.net >= 0 ? 'income' : 'expense'">{{ formatMoney(row.summary.net, { sign: true }) }}</b>
     </div>
-    <template v-if="opening !== undefined">
-      <div class="line">
-        <span>ยอดยกมาต้นรอบ</span>
-        <span class="num">{{ formatMoney(opening) }}</span>
-      </div>
-      <div class="line strong">
-        <span>คงเหลือท้ายรอบ</span>
-        <b class="num">{{ formatMoney(summary.closing) }}</b>
-      </div>
-    </template>
+    <div class="line strong">
+      <span>คงเหลือ</span>
+      <b class="num">{{ formatMoney(row.summary.closing) }}</b>
+    </div>
   </div>
 </template>
 

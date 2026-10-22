@@ -4,7 +4,7 @@ import { formatMoney, parseMoney } from '#shared/utils/format'
 import type { Account } from '#shared/utils/stats'
 
 const props = defineProps<{ initial?: Account }>()
-const emit = defineEmits<{ save: [value: Omit<Account, 'id' | 'createdAt'>] }>()
+const emit = defineEmits<{ save: [value: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>] }>()
 
 const bankId = ref(props.initial?.bankId ?? '')
 const name = ref(props.initial?.name ?? '')

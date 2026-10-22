@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { parseMoney, formatMoney } from '../shared/utils/format'
 import { balanceOf, groupByDay, summarize, type Account, type Transaction } from '../shared/utils/stats'
 
-const acc: Account = { id: 'a', bankId: 'kbank', name: 'หลัก', last4: '', openingBalance: 100_00, createdAt: 0 }
+const acc: Account = { id: 'a', bankId: 'kbank', name: 'หลัก', last4: '', openingBalance: 100_00, createdAt: 0, updatedAt: 0 }
 const tx = (p: Partial<Transaction>): Transaction => ({
-  id: Math.random().toString(), accountId: 'a', type: 'expense', amount: 0, category: 'food', date: '2026-10-22', note: '', createdAt: 0, ...p,
+  id: Math.random().toString(), accountId: 'a', type: 'expense', amount: 0, category: 'food', date: '2026-10-22', note: '', createdAt: 0, updatedAt: 0, ...p,
 })
 
 describe('money', () => {

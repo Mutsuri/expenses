@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import { bankById } from '#shared/utils/banks'
-import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
-import { formatDay, formatMoney, formatWeekday } from '#shared/utils/format'
+import { cycleOf, cycleTodayISO, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
+import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
 import { balanceOf, inCycle, summarize } from '#shared/utils/stats'
 
 const { state } = useStore()
+const { displayName } = useAuth()
 const today = todayISO()
 
-const cycle = computed(() => cycleOf(today, state.settings))
+// รอบใหม่เริ่มตอนตี 3 ของวันเงินเดือนออก
+const cycle = computed(() => cycleOf(cycleTodayISO(), state.settings))
 const nextPayday = computed(() => shiftCycle(cycle.value.key, 1, state.settings).start)
-const daysLeft = computed(() => daysBetween(today, nextPayday.value))
+const paydayText = computed(() => {
+  if (today === cycle.value.start) return 'เงินเดือนออกวันนี้'
+  const days = daysBetween(today, nextPayday.value)
+  return days === 0 ? 'เงินเดือนเข้าตี 3 วันนี้' : `อีก ${days} วันเงินเดือนออก`
+})
 
 const accounts = computed(() =>
   state.accounts.map((a) => {
@@ -18,33 +24,26 @@ const accounts = computed(() =>
   }),
 )
 const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
-const overall = computed(() => summarize(inCycle(state.transactions, cycle.value), 0))
 </script>
 
 <template>
   <main class="page">
+    <div class="hello muted">สวัสดี {{ displayName }}</div>
     <TopBar title="จดจ่าย">
+      <SyncBadge />
       <NuxtLink to="/settings" class="gear" aria-label="ตั้งค่า">⚙︎</NuxtLink>
     </TopBar>
+
+    <CycleNotice />
 
     <section class="hero">
       <div class="hero-label">ยอดเงินรวมทุกบัญชี</div>
       <div class="hero-total num">฿{{ formatMoney(total) }}</div>
       <div class="hero-cycle">
         รอบนี้ {{ formatDay(cycle.start) }} – {{ formatDay(cycle.end) }}
-        <span class="pill">{{ daysLeft === 0 ? 'เงินเดือนออกวันนี้' : `อีก ${daysLeft} วันเงินเดือนออก` }}</span>
+        <span class="pill">{{ paydayText }}</span>
       </div>
-      <div class="hero-row">
-        <div>
-          <div class="hero-label">รายรับรอบนี้</div>
-          <div class="num hero-num">{{ formatMoney(overall.income, { sign: true }) }}</div>
-        </div>
-        <div>
-          <div class="hero-label">รายจ่ายรอบนี้</div>
-          <div class="num hero-num">{{ formatMoney(-overall.expense) }}</div>
-        </div>
-      </div>
-      <div class="hero-next">เงินเดือนรอบหน้า: {{ formatWeekday(nextPayday) }}</div>
+      <div class="hero-next">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
     </section>
 
     <div class="section-title">
@@ -72,21 +71,18 @@ const overall = computed(() => summarize(inCycle(state.transactions, cycle.value
       <b>เพิ่มบัญชีแรก</b>
       <div class="muted">เลือกธนาคาร ตั้งชื่อ แล้วใส่ยอดเงินตอนนี้</div>
     </NuxtLink>
-
-    <NuxtLink v-if="accounts.length" to="/tx/new" class="fab" aria-label="จดรายการ">+</NuxtLink>
   </main>
 </template>
 
 <style scoped>
+.hello { font-size: 14px; margin: 4px 0 -8px; }
 .gear { width: 40px; height: 40px; border-radius: 50%; background: var(--card); box-shadow: var(--shadow); display: grid; place-items: center; font-size: 20px; }
 .hero { background: linear-gradient(135deg, #2f6fed, #6a4ff0); color: #fff; border-radius: 22px; padding: 18px; }
 .hero-label { font-size: 13px; opacity: 0.85; }
 .hero-total { font-size: 34px; font-weight: 700; line-height: 1.2; margin: 2px 0 8px; }
 .hero-cycle { font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
 .pill { background: rgb(255 255 255 / 0.2); border-radius: 99px; padding: 1px 10px; font-size: 13px; font-weight: 600; }
-.hero-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgb(255 255 255 / 0.25); }
-.hero-num { font-size: 18px; font-weight: 600; }
-.hero-next { font-size: 12px; margin-top: 10px; opacity: 0.8; }
+.hero-next { font-size: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / 0.25); opacity: 0.85; }
 .link { color: var(--accent); font-weight: 600; }
 .accounts { display: grid; gap: 10px; }
 .acc { display: flex; align-items: center; gap: 12px; }

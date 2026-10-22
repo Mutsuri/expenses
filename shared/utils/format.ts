@@ -27,6 +27,9 @@ const monthLongFmt = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'nu
 export const formatDay = (iso: string) => dayFmt.format(fromISO(iso))
 export const formatDayYear = (iso: string) => dayYearFmt.format(fromISO(iso))
 export const formatWeekday = (iso: string) => weekdayFmt.format(fromISO(iso))
+const weekdayYearFmt = new Intl.DateTimeFormat('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+/** 'วันพุธที่ 25 พฤศจิกายน 2569' */
+export const formatWeekdayYear = (iso: string) => weekdayYearFmt.format(fromISO(iso))
 /** '2026-10' → 'ต.ค. 69' */
 export const formatCycleShort = (key: string) => monthFmt.format(fromISO(`${key}-01`))
 /** '2026-10' → 'ตุลาคม 2569' */

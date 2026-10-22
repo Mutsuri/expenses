@@ -6,7 +6,6 @@ const id = route.params.id as string
 const tx = computed(() => store.state.transactions.find((t) => t.id === id))
 
 function remove() {
-  if (!confirm('ลบรายการนี้?')) return
   store.removeTransaction(id)
   router.back()
 }
@@ -17,7 +16,7 @@ function remove() {
     <TopBar title="แก้ไขรายการ" back />
     <template v-if="tx">
       <TxForm :initial="tx" @save="(v) => { store.updateTransaction(id, v); router.back() }" />
-      <button class="btn btn-danger btn-block del" @click="remove">ลบรายการ</button>
+      <ConfirmButton class="btn btn-danger btn-block del" label="ลบรายการ" confirm-label="แตะอีกครั้งเพื่อลบ" @confirm="remove" />
     </template>
     <p v-else class="muted">ไม่พบรายการนี้</p>
   </main>

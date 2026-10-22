@@ -6,9 +6,9 @@ const id = route.params.id as string
 const account = computed(() => store.state.accounts.find((a) => a.id === id))
 const txCount = computed(() => store.state.transactions.filter((t) => t.accountId === id).length)
 
+const confirmText = computed(() => (txCount.value ? `แตะอีกครั้งเพื่อลบ (รวม ${txCount.value} รายการ)` : 'แตะอีกครั้งเพื่อลบ'))
+
 function remove() {
-  const msg = txCount.value ? `ลบบัญชีนี้และรายการทั้งหมด ${txCount.value} รายการ?` : 'ลบบัญชีนี้?'
-  if (!confirm(msg)) return
   store.removeAccount(id)
   router.replace('/')
 }
@@ -19,7 +19,7 @@ function remove() {
     <TopBar title="แก้ไขบัญชี" :back="`/accounts/${id}`" />
     <template v-if="account">
       <AccountForm :initial="account" @save="(v) => { store.updateAccount(id, v); router.replace(`/accounts/${id}`) }" />
-      <button class="btn btn-danger btn-block del" @click="remove">ลบบัญชี</button>
+      <ConfirmButton class="btn btn-danger btn-block del" label="ลบบัญชี" :confirm-label="confirmText" @confirm="remove" />
     </template>
     <p v-else class="muted">ไม่พบบัญชีนี้</p>
   </main>

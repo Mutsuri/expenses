@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { formatCycleShort, formatMoney } from '#shared/utils/format'
-import type { CycleRow } from '~/utils/history'
+import type { CycleRow } from '#shared/utils/history'
 
 const props = defineProps<{ rows: CycleRow[]; selected: string }>()
 const emit = defineEmits<{ select: [key: string] }>()

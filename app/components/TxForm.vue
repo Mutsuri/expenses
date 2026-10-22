@@ -6,7 +6,7 @@ import { formatMoney, parseMoney } from '#shared/utils/format'
 import type { Transaction } from '#shared/utils/stats'
 
 const props = defineProps<{ initial?: Transaction; accountId?: string }>()
-const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt'>] }>()
+const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>] }>()
 const { state } = useStore()
 
 const type = ref<TxType>(props.initial?.type ?? 'expense')

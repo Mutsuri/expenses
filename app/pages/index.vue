@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { bankById } from '#shared/utils/banks'
-import { cycleOf, cycleTodayISO, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
+import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
 import { balanceOf, involves } from '#shared/utils/stats'
 
@@ -8,14 +8,11 @@ const { state } = useStore()
 const { displayName } = useAuth()
 const today = todayISO()
 
-// รอบใหม่เริ่มตอนตี 3 ของวันเงินเดือนออก
-const cycle = computed(() => cycleOf(cycleTodayISO(), state.settings))
+const cycle = computed(() => cycleOf(today, state.settings))
 const nextPayday = computed(() => shiftCycle(cycle.value.key, 1, state.settings).start)
-const paydayText = computed(() => {
-  if (today === cycle.value.start) return 'เงินเดือนออกวันนี้'
-  const days = daysBetween(today, nextPayday.value)
-  return days === 0 ? 'เงินเดือนเข้าตี 3 วันนี้' : `อีก ${days} วันเงินเดือนออก`
-})
+const paydayText = computed(() =>
+  today === cycle.value.start ? 'เงินเดือนออกวันนี้' : `อีก ${daysBetween(today, nextPayday.value)} วันเงินเดือนออก`,
+)
 
 // บัญชีรับเงินเดือนขึ้นก่อน
 const accounts = computed(() =>

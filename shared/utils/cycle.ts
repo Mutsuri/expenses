@@ -37,14 +37,6 @@ export function todayISO(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-/** เงินเดือนเข้าบัญชีประมาณตี 3 ของวันเงินเดือนออก */
-export const PAYDAY_HOUR = 3
-
-/** วันที่ใช้เลือกรอบปัจจุบัน: ก่อนตี 3 ยังนับเป็นวันก่อน รอบใหม่จึงเริ่มตอนตี 3 */
-export function cycleTodayISO(now = new Date()): string {
-  return todayISO(new Date(now.getTime() - PAYDAY_HOUR * 3_600_000))
-}
-
 export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((fromISO(toIso).getTime() - fromISO(fromIso).getTime()) / 86_400_000)
 }

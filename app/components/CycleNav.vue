@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { cycleOf, shiftCycle, cycleTodayISO, type Cycle } from '#shared/utils/cycle'
+import { cycleOf, shiftCycle, todayISO, type Cycle } from '#shared/utils/cycle'
 import { formatCycleLong, formatDay, formatDayYear } from '#shared/utils/format'
 
 const model = defineModel<string>({ required: true })
 const { state } = useStore()
 
 const cycle = computed<Cycle>(() => shiftCycle(model.value, 0, state.settings))
-const current = computed(() => cycleOf(cycleTodayISO(), state.settings).key)
+const current = computed(() => cycleOf(todayISO(), state.settings).key)
 const isCurrent = computed(() => model.value === current.value)
 
 function move(by: number) {

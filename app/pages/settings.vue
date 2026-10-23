@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { cycleOf, fromISO, paydayOf, shiftCycle, cycleTodayISO } from '#shared/utils/cycle'
+import { cycleOf, fromISO, paydayOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleLong, formatDayYear, formatWeekday } from '#shared/utils/format'
 
 const store = useStore()
@@ -7,7 +7,7 @@ const { state } = store
 const newHoliday = ref('')
 
 const upcoming = computed(() => {
-  const now = cycleOf(cycleTodayISO(), state.settings)
+  const now = cycleOf(todayISO(), state.settings)
   return Array.from({ length: 6 }, (_, i) => {
     const c = shiftCycle(now.key, i, state.settings)
     const [y, m] = c.key.split('-').map(Number) as [number, number]
@@ -125,7 +125,7 @@ function unlink() {
           <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
         </select>
       </label>
-      <p class="text-[13px] text-muted">ถ้าตรงเสาร์ อาทิตย์ หรือวันหยุดด้านล่าง จะเลื่อนไปวันทำการก่อนหน้า รอบใหม่เริ่มตอนตี 3 ของวันเงินเดือนออก (เวลาที่เงินเข้า) และจบก่อนเงินเดือนรอบถัดไป</p>
+      <p class="text-[13px] text-muted">ถ้าตรงเสาร์ อาทิตย์ หรือวันหยุดด้านล่าง จะเลื่อนไปวันทำการก่อนหน้า รอบเดือนเริ่มวันเงินเดือนออก และจบวันก่อนเงินเดือนรอบถัดไป</p>
     </div>
 
     <div class="section-title"><span>เงินเดือนออก 6 รอบถัดไป</span></div>

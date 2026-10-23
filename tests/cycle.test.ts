@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cycleOf, cycleTodayISO, paydayOf, shiftCycle } from '../shared/utils/cycle'
+import { cycleOf, paydayOf, shiftCycle } from '../shared/utils/cycle'
 import { DEFAULT_HOLIDAYS } from '../shared/utils/holidays'
 
 const s = { paydayDay: 25, holidays: DEFAULT_HOLIDAYS }
@@ -41,15 +41,5 @@ describe('cycleOf', () => {
     expect(cycleOf('2027-01-10', s).key).toBe('2026-12')
     expect(shiftCycle('2026-12', 1, s).key).toBe('2027-01')
     expect(shiftCycle('2027-01', -1, s).key).toBe('2026-12')
-  })
-})
-
-describe('cycleTodayISO', () => {
-  // เวลาท้องถิ่นของเครื่อง
-  const at = (h: number, m = 0) => new Date(2026, 9, 22, h, m)
-
-  it('switches to the new cycle at 3am on payday', () => {
-    expect(cycleOf(cycleTodayISO(at(2, 59)), s).key).toBe('2026-09')
-    expect(cycleOf(cycleTodayISO(at(3, 0)), s).key).toBe('2026-10')
   })
 })

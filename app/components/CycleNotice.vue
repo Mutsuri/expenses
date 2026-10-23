@@ -2,13 +2,13 @@
 // แจ้งเมื่อเริ่มรอบใหม่ และเงินคงเหลือรอบก่อนถูกยกมาให้แล้ว
 // ขึ้นครั้งเดียวต่อรอบ จำไว้ในเครื่องว่าเห็นรอบไหนแล้ว
 import { bankById } from '#shared/utils/banks'
-import { cycleOf, shiftCycle, cycleTodayISO } from '#shared/utils/cycle'
+import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleLong, formatCycleShort, formatMoney } from '#shared/utils/format'
 import { accountCycles } from '#shared/utils/history'
 
 const KEY = 'expenses.seenCycle'
 const { state } = useStore()
-const today = cycleTodayISO()
+const today = todayISO()
 const current = computed(() => cycleOf(today, state.settings))
 
 function readSeen(): string | null {

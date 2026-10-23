@@ -1,6 +1,5 @@
 // sync กับ Google Sheet ผ่าน Apps Script
-// ลิงก์และรหัสลับเก็บในเครื่องนี้เท่านั้น (ไม่อยู่ในโค้ดบน GitHub)
-import { get, set } from 'idb-keyval'
+// ลิงก์และรหัสลับเก็บในเครื่องนี้เท่านั้น แบบเข้ารหัสไปพร้อมข้อมูล (ไม่อยู่ในโค้ดบน GitHub)
 import { buildRequest, type SyncResponse } from '#shared/utils/sync'
 
 interface SyncState {
@@ -25,8 +24,8 @@ let manual = false
 
 const configured = () => Boolean(sync.url && sync.secret)
 
-async function saveConfig() {
-  await set('sync', { url: sync.url, secret: sync.secret, lastSyncAt: sync.lastSyncAt })
+function saveConfig() {
+  useStore().setSyncConfig({ url: sync.url, secret: sync.secret, lastSyncAt: sync.lastSyncAt })
 }
 
 async function run() {
@@ -54,7 +53,7 @@ async function run() {
     sync.status = 'idle'
     sync.error = ''
     if (carried) sync.doneAt = Date.now()
-    await saveConfig()
+    saveConfig()
   } catch (err) {
     if (carried) sync.pending = true
     sync.status = 'error'
@@ -91,11 +90,12 @@ function scheduleSync() {
 async function start() {
   if (started) return
   started = true
-  const saved = await get<{ url: string; secret: string; lastSyncAt: number | null }>('sync')
-  if (saved) Object.assign(sync, saved)
+  const store = useStore()
+  // ลิงก์และรหัสลับอยู่ในข้อมูลที่เข้ารหัส อ่านได้หลังเปิดข้อมูลในเครื่องเสร็จ
+  await store.whenReady()
+  Object.assign(sync, store.state.syncConfig)
   sync.status = configured() ? 'idle' : 'off'
   setLocalChangeListener(scheduleSync)
-  await useStore().whenReady()
   window.addEventListener('online', () => syncNow())
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && syncNow())
   syncNow()
@@ -117,18 +117,18 @@ export function useSync() {
       sync.secret = secret.trim()
       sync.status = configured() ? 'idle' : 'off'
       sync.error = ''
-      await saveConfig()
+      saveConfig()
       manual = true
       await syncNow()
     },
-    async disconnect() {
+    disconnect() {
       sync.url = ''
       sync.secret = ''
       sync.lastSyncAt = null
       sync.status = 'off'
       sync.error = ''
       sync.pending = false
-      await saveConfig()
+      saveConfig()
     },
   }
 }

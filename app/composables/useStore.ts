@@ -1,8 +1,22 @@
-// ข้อมูลทั้งหมดเก็บใน IndexedDB ของเครื่อง แล้ว sync กับ Google Sheet ผ่าน useSync
-import { get, set } from 'idb-keyval'
+// ข้อมูลทั้งหมดเก็บในเครื่องแบบเข้ารหัส (useVault) แล้ว sync กับ Google Sheet ผ่าน useSync
 import { DEFAULT_HOLIDAYS } from '#shared/utils/holidays'
 import { involves, type Account, type Transaction } from '#shared/utils/stats'
 import { mergeRemote, mergeSettings, type Settings, type SyncResponse, type Tombstone } from '#shared/utils/sync'
+
+export interface SyncConfig {
+  url: string
+  secret: string
+  lastSyncAt: number | null
+}
+
+/** ข้อมูลทั้งก้อนที่เข้ารหัสเก็บใน vault */
+export interface StoredData {
+  accounts?: Account[]
+  transactions?: Transaction[]
+  settings?: Settings
+  tombstones?: Tombstone[]
+  sync?: SyncConfig
+}
 
 interface State {
   ready: boolean
@@ -11,6 +25,8 @@ interface State {
   settings: Settings
   /** รายการที่ลบในเครื่องแต่ยังไม่ได้แจ้งชีต */
   tombstones: Tombstone[]
+  /** ลิงก์และรหัสลับของชีต (เข้ารหัสไปพร้อมข้อมูล) */
+  syncConfig: SyncConfig
 }
 
 const state = reactive<State>({
@@ -20,10 +36,11 @@ const state = reactive<State>({
   // updatedAt = 0 ให้ค่าจากชีตชนะตอน sync ครั้งแรก
   settings: { paydayDay: 25, holidays: [...DEFAULT_HOLIDAYS], updatedAt: 0 },
   tombstones: [],
+  syncConfig: { url: '', secret: '', lastSyncAt: null },
 })
 
-let loading: Promise<void> | null = null
 let onLocalChange = () => {}
+let opening: Promise<void> | null = null
 
 /** useSync ลงทะเบียนไว้ เพื่อ sync หลังข้อมูลในเครื่องเปลี่ยน */
 export function setLocalChangeListener(fn: () => void) {
@@ -32,27 +49,63 @@ export function setLocalChangeListener(fn: () => void) {
 
 const plain = <T extends object>(list: T[]) => toRaw(list).map((x) => ({ ...toRaw(x) }))
 
-function load() {
-  loading ??= (async () => {
-    const [accounts, transactions, settings, tombstones] = await Promise.all([
-      get<Account[]>('accounts'),
-      get<Transaction[]>('transactions'),
-      get<Settings>('settings'),
-      get<Tombstone[]>('tombstones'),
-    ])
-    // ข้อมูลรุ่นแรกยังไม่มี updatedAt
-    if (accounts) state.accounts = accounts.map((a) => ({ ...a, updatedAt: a.updatedAt ?? a.createdAt }))
-    if (transactions) state.transactions = transactions.map((t) => ({ ...t, updatedAt: t.updatedAt ?? t.createdAt }))
-    if (settings) state.settings = { ...settings, updatedAt: settings.updatedAt ?? 0 }
-    if (tombstones) state.tombstones = tombstones
-    state.ready = true
-    // บันทึกทุกครั้งที่ข้อมูลเปลี่ยน
-    watch(() => state.accounts, (v) => set('accounts', plain(v)), { deep: true })
-    watch(() => state.transactions, (v) => set('transactions', plain(v)), { deep: true })
-    watch(() => state.settings, (v) => set('settings', { ...toRaw(v), holidays: [...v.holidays] }), { deep: true })
-    watch(() => state.tombstones, (v) => set('tombstones', plain(v)), { deep: true })
+function snapshot(): StoredData {
+  return {
+    accounts: plain(state.accounts),
+    transactions: plain(state.transactions),
+    settings: { ...toRaw(state.settings), holidays: [...state.settings.holidays] },
+    tombstones: plain(state.tombstones),
+    sync: { ...toRaw(state.syncConfig) },
+  }
+}
+
+// บันทึกลง vault หลังข้อมูลเปลี่ยน (รวบหลายการแก้เป็นครั้งเดียว)
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+function persist() {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => useVault().save(snapshot()), 300)
+}
+
+/** ใส่ข้อมูลที่ถอดรหัสแล้วเข้า state แล้วเริ่มบันทึกอัตโนมัติ */
+function hydrate(data: StoredData) {
+  // ข้อมูลรุ่นแรกยังไม่มี updatedAt
+  if (data.accounts) state.accounts = data.accounts.map((a) => ({ ...a, updatedAt: a.updatedAt ?? a.createdAt }))
+  if (data.transactions) state.transactions = data.transactions.map((t) => ({ ...t, updatedAt: t.updatedAt ?? t.createdAt }))
+  if (data.settings) state.settings = { ...data.settings, updatedAt: data.settings.updatedAt ?? 0 }
+  if (data.tombstones) state.tombstones = data.tombstones
+  if (data.sync) state.syncConfig = { ...data.sync }
+  state.ready = true
+  watch(() => [state.accounts, state.transactions, state.settings, state.tombstones, state.syncConfig], persist, { deep: true })
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      clearTimeout(saveTimer)
+      useVault().save(snapshot())
+    }
+  })
+}
+
+/** เปิดข้อมูลที่เข้ารหัสในเครื่อง ครั้งแรกย้ายข้อมูลเก่าที่ยังไม่เข้ารหัสเข้ามาแล้วลบตัวเดิม */
+function open() {
+  opening ??= (async () => {
+    const vault = useVault()
+    let data = await vault.load<StoredData>()
+    if (!data) {
+      const old = await vault.readLegacy()
+      data = old
+        ? {
+            accounts: old.accounts as StoredData['accounts'],
+            transactions: old.transactions as StoredData['transactions'],
+            settings: old.settings as StoredData['settings'],
+            tombstones: old.tombstones as StoredData['tombstones'],
+            sync: old.sync as SyncConfig | undefined,
+          }
+        : {}
+      await vault.save(data)
+      await vault.clearLegacy()
+    }
+    hydrate(data)
   })()
-  return loading
+  return opening
 }
 
 const newId = () => crypto.randomUUID()
@@ -75,11 +128,16 @@ function touchSettings() {
 }
 
 export function useStore() {
-  if (import.meta.client) load()
+  if (import.meta.client) open()
 
   return {
     state: readonly(state),
-    whenReady: () => load(),
+    /** รอจนเปิดข้อมูลในเครื่องเสร็จ */
+    whenReady: () => open(),
+
+    setSyncConfig(patch: Partial<SyncConfig>) {
+      Object.assign(state.syncConfig, patch)
+    },
 
     addAccount(a: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>): string {
       const id = newId()

@@ -23,7 +23,6 @@ const accounts = computed(() =>
       return { ...a, balance: balanceOf(a, txs) }
     }),
 )
-const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
 </script>
 
 <template>
@@ -38,10 +37,9 @@ const total = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
     <CycleNotice />
 
     <section class="rounded-[22px] bg-linear-135 from-[#2f6fed] to-[#6a4ff0] p-[18px] text-white">
-      <div class="text-[13px] opacity-85">ยอดเงินรวมทุกบัญชี</div>
-      <div class="mt-0.5 mb-2 text-[34px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(total) }}</div>
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
-        รอบนี้ {{ formatDay(cycle.start) }} – {{ formatDay(cycle.end) }}
+      <div class="text-[13px] opacity-85">รอบเงินเดือนนี้</div>
+      <div class="mt-0.5 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span class="text-2xl leading-[1.2] font-bold">{{ formatDay(cycle.start) }} – {{ formatDay(cycle.end) }}</span>
         <span class="rounded-full bg-white/20 px-2.5 py-px text-[13px] font-semibold">{{ paydayText }}</span>
       </div>
       <div class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>

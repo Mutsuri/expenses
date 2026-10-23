@@ -66,11 +66,9 @@ function connect() {
 }
 
 const auth = useAuth()
-const router = useRouter()
 
 function logout() {
   auth.logout()
-  router.replace('/login')
 }
 
 function unlink() {

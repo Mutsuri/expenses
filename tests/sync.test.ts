@@ -32,11 +32,12 @@ describe('mergeRemote', () => {
 
 describe('sync request', () => {
   it('sends deletions as tombstones next to live rows', () => {
-    const req = buildRequest('s', [], [], { paydayDay: 25, holidays: [], updatedAt: 0 }, [
+    const req = buildRequest('s', 'mutto', [], [], { paydayDay: 25, holidays: [], updatedAt: 0 }, [
       { kind: 'transaction', id: 't1', updatedAt: 7 },
     ])
     expect(req.transactions).toEqual([{ id: 't1', updatedAt: 7, deleted: true }])
     expect(req.accounts).toEqual([])
+    expect(req.user).toBe('mutto')
   })
 
   it('keeps the newest settings', () => {

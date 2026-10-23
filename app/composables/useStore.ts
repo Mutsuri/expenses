@@ -1,5 +1,6 @@
 // ข้อมูลทั้งหมดเก็บในเครื่องแบบเข้ารหัส (useVault) แล้ว sync กับ Google Sheet ผ่าน useSync
 import { DEFAULT_HOLIDAYS } from '#shared/utils/holidays'
+import { DEFAULT_OWNER } from '#shared/utils/users'
 import { involves, type Account, type Transaction } from '#shared/utils/stats'
 import { mergeRemote, mergeSettings, type Settings, type SyncResponse, type Tombstone } from '#shared/utils/sync'
 
@@ -41,6 +42,8 @@ const state = reactive<State>({
 
 let onLocalChange = () => {}
 let opening: Promise<void> | null = null
+let markReady: () => void
+const ready = new Promise<void>((r) => (markReady = r))
 
 /** useSync ลงทะเบียนไว้ เพื่อ sync หลังข้อมูลในเครื่องเปลี่ยน */
 export function setLocalChangeListener(fn: () => void) {
@@ -84,13 +87,16 @@ function hydrate(data: StoredData) {
   })
 }
 
-/** เปิดข้อมูลที่เข้ารหัสในเครื่อง ครั้งแรกย้ายข้อมูลเก่าที่ยังไม่เข้ารหัสเข้ามาแล้วลบตัวเดิม */
-function open() {
+/**
+ * เปิดข้อมูลของผู้ใช้ที่ login (เปิดได้ครั้งเดียวต่อการโหลดหน้า เปลี่ยนผู้ใช้ต้องรีโหลด)
+ * ผู้ใช้คนแรกเปิดครั้งแรก: ย้ายข้อมูลเก่าที่ยังไม่เข้ารหัสเข้ามาแล้วลบตัวเดิม
+ */
+function open(user: string) {
   opening ??= (async () => {
     const vault = useVault()
-    let data = await vault.load<StoredData>()
+    let data = await vault.load<StoredData>(user)
     if (!data) {
-      const old = await vault.readLegacy()
+      const old = user === DEFAULT_OWNER ? await vault.readLegacy() : null
       data = old
         ? {
             accounts: old.accounts as StoredData['accounts'],
@@ -101,9 +107,10 @@ function open() {
           }
         : {}
       await vault.save(data)
-      await vault.clearLegacy()
+      if (old) await vault.clearLegacy()
     }
     hydrate(data)
+    markReady()
   })()
   return opening
 }
@@ -128,12 +135,11 @@ function touchSettings() {
 }
 
 export function useStore() {
-  if (import.meta.client) open()
-
   return {
     state: readonly(state),
-    /** รอจนเปิดข้อมูลในเครื่องเสร็จ */
-    whenReady: () => open(),
+    open,
+    /** รอจนเปิดข้อมูลของผู้ใช้เสร็จ (หลัง login) */
+    whenReady: () => ready,
 
     setSyncConfig(patch: Partial<SyncConfig>) {
       Object.assign(state.syncConfig, patch)

@@ -5,8 +5,8 @@ const base = useRuntimeConfig().app.baseURL
 const name = ref('')
 const error = ref('')
 
-function submit() {
-  if (login(name.value)) router.replace('/')
+async function submit() {
+  if (await login(name.value)) router.replace('/')
   else error.value = 'ไม่พบชื่อผู้ใช้นี้'
 }
 </script>

@@ -18,6 +18,8 @@ export interface Tombstone {
 
 export interface SyncRequest {
   secret: string
+  /** ชื่อผู้ใช้ ชีตแยกแถวตามผู้ใช้ */
+  user: string
   accounts: Deletable<Account>[]
   transactions: Deletable<Transaction>[]
   settings: Settings
@@ -29,6 +31,7 @@ export type SyncResponse =
 
 export function buildRequest(
   secret: string,
+  user: string,
   accounts: Account[],
   transactions: Transaction[],
   settings: Settings,
@@ -38,6 +41,7 @@ export function buildRequest(
     tombstones.filter((t) => t.kind === kind).map((t) => ({ id: t.id, updatedAt: t.updatedAt, deleted: true }))
   return {
     secret,
+    user,
     accounts: [...accounts, ...(dead('account') as Deletable<Account>[])],
     transactions: [...transactions, ...(dead('transaction') as Deletable<Transaction>[])],
     settings,

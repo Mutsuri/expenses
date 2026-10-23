@@ -34,6 +34,7 @@ async function run() {
   const tombstones = state.tombstones.map((t) => ({ ...t }))
   const body = buildRequest(
     sync.secret,
+    useAuth().username.value!,
     state.accounts.map((a) => ({ ...a })),
     state.transactions.map((t) => ({ ...t })),
     { ...state.settings, holidays: [...state.settings.holidays] },

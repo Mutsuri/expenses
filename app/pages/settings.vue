@@ -83,6 +83,12 @@ function unlink() {
   <main class="page">
     <TopBar title="ตั้งค่า" back="/" />
 
+    <div class="section-title"><span>บัญชีผู้ใช้</span></div>
+    <div class="card flex items-center justify-between gap-3">
+      <span>เข้าสู่ระบบเป็น <b>{{ auth.displayName.value }}</b></span>
+      <button class="btn btn-danger" type="button" @click="logout">ออกจากระบบ</button>
+    </div>
+
     <div class="section-title"><span>Google Sheet</span></div>
     <div class="card">
       <div class="mb-3.5 flex items-baseline gap-2 text-sm" :class="{ 'text-expense': sync.status === 'error' }">
@@ -166,11 +172,5 @@ function unlink() {
       </div>
 
     </template>
-
-    <div class="section-title"><span>บัญชีผู้ใช้</span></div>
-    <div class="card flex items-center justify-between gap-3">
-      <span>เข้าสู่ระบบเป็น <b>{{ auth.displayName.value }}</b></span>
-      <button class="btn btn-danger" type="button" @click="logout">ออกจากระบบ</button>
-    </div>
   </main>
 </template>

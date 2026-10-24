@@ -3,7 +3,7 @@ import { cycleOf, fromISO, paydayOf, shiftCycle, todayISO } from '#shared/utils/
 import { formatCycleLong, formatDayYear, formatWeekday } from '#shared/utils/format'
 
 const store = useStore()
-const { state } = store
+const { state, hasSalary } = store
 const newHoliday = ref('')
 
 const upcoming = computed(() => {
@@ -115,42 +115,46 @@ function unlink() {
       />
     </div>
 
-    <div class="section-title"><span>รอบเดือน</span></div>
-    <div class="card">
-      <label class="field">
-        <span>เงินเดือนออกทุกวันที่</span>
-        <select class="input" :value="state.settings.paydayDay" @change="store.setPaydayDay(Number(($event.target as HTMLSelectElement).value))">
-          <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
-        </select>
-      </label>
-      <p class="text-[13px] text-muted">ถ้าตรงเสาร์ อาทิตย์ หรือวันหยุดด้านล่าง จะเลื่อนไปวันทำการก่อนหน้า รอบเดือนเริ่มวันเงินเดือนออก และจบวันก่อนเงินเดือนรอบถัดไป</p>
-    </div>
-
-    <div class="section-title"><span>เงินเดือนออก 6 รอบถัดไป</span></div>
-    <div class="card divide-y divide-line px-4 py-1">
-      <div v-for="u in upcoming" :key="u.key" class="flex justify-between gap-2 py-2.5 text-[15px]">
-        <span>{{ formatCycleLong(u.key) }}</span>
-        <span :class="{ 'font-semibold text-accent': u.moved }">{{ formatWeekday(u.payday) }}<template v-if="u.moved"> (เลื่อน)</template></span>
+    <!-- ผู้ใช้ที่ไม่มีเงินเดือนนับรอบตามเดือนปฏิทิน ไม่ต้องตั้งวันเงินเดือนและวันหยุด -->
+    <template v-if="hasSalary">
+      <div class="section-title"><span>รอบเดือน</span></div>
+      <div class="card">
+        <label class="field">
+          <span>เงินเดือนออกทุกวันที่</span>
+          <select class="input" :value="state.settings.paydayDay" @change="store.setPaydayDay(Number(($event.target as HTMLSelectElement).value))">
+            <option v-for="d in 31" :key="d" :value="d">{{ d }}</option>
+          </select>
+        </label>
+        <p class="text-[13px] text-muted">ถ้าตรงเสาร์ อาทิตย์ หรือวันหยุดด้านล่าง จะเลื่อนไปวันทำการก่อนหน้า รอบเดือนเริ่มวันเงินเดือนออก และจบวันก่อนเงินเดือนรอบถัดไป</p>
       </div>
-    </div>
 
-    <div class="section-title"><span>วันหยุดธนาคาร</span></div>
-    <div class="card">
-      <form class="mb-2.5 flex gap-2" @submit.prevent="add">
-        <input v-model="newHoliday" type="date" class="input">
-        <button class="btn btn-primary" type="submit">เพิ่ม</button>
-      </form>
-      <p class="text-[13px] text-muted">ใส่วันหยุดปี 2569 และวันหยุดวันที่ตายตัวของปี 2570 ไว้ให้แล้ว วันหยุดทางจันทรคติและวันชดเชยของปี 2570 ต้องเพิ่มเองเมื่อ ธปท. ประกาศ</p>
-      <div v-for="[year, days] in byYear" :key="year">
-        <div class="mt-3.5 mb-1.5 font-semibold">พ.ศ. {{ buddhistYear(year) }}</div>
-        <div class="flex flex-wrap gap-1.5">
-          <span v-for="d in days" :key="d" class="inline-flex items-center gap-0.5 rounded-full bg-card-2 py-[3px] pr-1 pl-2.5 text-[13px]">
-            {{ dayLabel(d) }}
-            <button type="button" class="px-1.5 text-base leading-none text-muted" aria-label="ลบ" @click="store.removeHoliday(d)">×</button>
-          </span>
+      <div class="section-title"><span>เงินเดือนออก 6 รอบถัดไป</span></div>
+      <div class="card divide-y divide-line px-4 py-1">
+        <div v-for="u in upcoming" :key="u.key" class="flex justify-between gap-2 py-2.5 text-[15px]">
+          <span>{{ formatCycleLong(u.key) }}</span>
+          <span :class="{ 'font-semibold text-accent': u.moved }">{{ formatWeekday(u.payday) }}<template v-if="u.moved"> (เลื่อน)</template></span>
         </div>
       </div>
-    </div>
+
+      <div class="section-title"><span>วันหยุดธนาคาร</span></div>
+      <div class="card">
+        <form class="mb-2.5 flex gap-2" @submit.prevent="add">
+          <input v-model="newHoliday" type="date" class="input">
+          <button class="btn btn-primary" type="submit">เพิ่ม</button>
+        </form>
+        <p class="text-[13px] text-muted">ใส่วันหยุดปี 2569 และวันหยุดวันที่ตายตัวของปี 2570 ไว้ให้แล้ว วันหยุดทางจันทรคติและวันชดเชยของปี 2570 ต้องเพิ่มเองเมื่อ ธปท. ประกาศ</p>
+        <div v-for="[year, days] in byYear" :key="year">
+          <div class="mt-3.5 mb-1.5 font-semibold">พ.ศ. {{ buddhistYear(year) }}</div>
+          <div class="flex flex-wrap gap-1.5">
+            <span v-for="d in days" :key="d" class="inline-flex items-center gap-0.5 rounded-full bg-card-2 py-[3px] pr-1 pl-2.5 text-[13px]">
+              {{ dayLabel(d) }}
+              <button type="button" class="px-1.5 text-base leading-none text-muted" aria-label="ลบ" @click="store.removeHoliday(d)">×</button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </template>
 
     <div class="section-title"><span>บัญชีผู้ใช้</span></div>
     <div class="card flex items-center justify-between gap-3">

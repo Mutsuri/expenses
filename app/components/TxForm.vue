@@ -7,7 +7,12 @@ import type { Transaction, TxKind } from '#shared/utils/stats'
 
 const props = defineProps<{ initial?: Transaction; accountId?: string; type?: TxKind }>()
 const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>] }>()
-const { state } = useStore()
+const { state, hasSalary } = useStore()
+// ผู้ใช้ที่ไม่มีเงินเดือนไม่ต้องมีหมวดเงินเดือน
+const categories = computed(() => ({
+  expense: CATEGORIES.expense,
+  income: hasSalary.value ? CATEGORIES.income : CATEGORIES.income.filter((c) => c.id !== 'salary'),
+}))
 
 const salaryId = state.accounts.find((a) => a.salary)?.id
 const type = ref<TxKind>(props.initial?.type ?? props.type ?? 'expense')
@@ -36,7 +41,7 @@ const targets = computed(() => state.accounts.filter((a) => a.id !== accountId.v
 
 watch(type, (t) => {
   error.value = ''
-  if (t !== 'transfer' && !CATEGORIES[t].some((c) => c.id === category.value)) category.value = CATEGORIES[t][0]!.id
+  if (t !== 'transfer' && !categories.value[t].some((c) => c.id === category.value)) category.value = categories.value[t][0]!.id
 })
 // ปลายทางต้องไม่ใช่บัญชีเดียวกับต้นทาง
 watch(
@@ -98,7 +103,7 @@ function submit() {
       <div class="section-title"><span>หมวด</span></div>
       <div class="grid grid-cols-4 gap-2">
         <button
-          v-for="c in CATEGORIES[type]"
+          v-for="c in categories[type]"
           :key="c.id"
           type="button"
           class="flex flex-col items-center gap-0.5 rounded-[14px] border-2 bg-card px-1 py-2.5 text-xs shadow-card"

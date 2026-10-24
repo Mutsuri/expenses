@@ -3,14 +3,14 @@ import { cycleOf, shiftCycle, todayISO, type Cycle } from '#shared/utils/cycle'
 import { formatCycleLong, formatDay, formatDayYear } from '#shared/utils/format'
 
 const model = defineModel<string>({ required: true })
-const { state } = useStore()
+const { cycleSettings } = useStore()
 
-const cycle = computed<Cycle>(() => shiftCycle(model.value, 0, state.settings))
-const current = computed(() => cycleOf(todayISO(), state.settings).key)
+const cycle = computed<Cycle>(() => shiftCycle(model.value, 0, cycleSettings.value))
+const current = computed(() => cycleOf(todayISO(), cycleSettings.value).key)
 const isCurrent = computed(() => model.value === current.value)
 
 function move(by: number) {
-  model.value = shiftCycle(model.value, by, state.settings).key
+  model.value = shiftCycle(model.value, by, cycleSettings.value).key
 }
 </script>
 

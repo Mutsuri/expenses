@@ -1,6 +1,7 @@
 // ข้อมูลทั้งหมดเก็บในเครื่องแบบเข้ารหัส (useVault) แล้ว sync กับ Google Sheet ผ่าน useSync
+import { CALENDAR_MONTH } from '#shared/utils/cycle'
 import { DEFAULT_HOLIDAYS } from '#shared/utils/holidays'
-import { DEFAULT_OWNER } from '#shared/utils/users'
+import { DEFAULT_OWNER, usesSalary } from '#shared/utils/users'
 import { involves, type Account, type Transaction } from '#shared/utils/stats'
 import { mergeRemote, mergeSettings, type Settings, type SyncResponse, type Tombstone } from '#shared/utils/sync'
 
@@ -39,6 +40,11 @@ const state = reactive<State>({
   tombstones: [],
   syncConfig: { url: '', secret: '', lastSyncAt: null },
 })
+
+const user = ref<string | null>(null)
+const hasSalary = computed(() => !user.value || usesSalary(user.value))
+// ผู้ใช้ที่ไม่มีเงินเดือนนับรอบตามเดือนปฏิทิน
+const cycleSettings = computed(() => (hasSalary.value ? state.settings : CALENDAR_MONTH))
 
 let onLocalChange = () => {}
 let opening: Promise<void> | null = null
@@ -91,12 +97,13 @@ function hydrate(data: StoredData) {
  * เปิดข้อมูลของผู้ใช้ที่ login (เปิดได้ครั้งเดียวต่อการโหลดหน้า เปลี่ยนผู้ใช้ต้องรีโหลด)
  * ผู้ใช้คนแรกเปิดครั้งแรก: ย้ายข้อมูลเก่าที่ยังไม่เข้ารหัสเข้ามาแล้วลบตัวเดิม
  */
-function open(user: string) {
+function open(name: string) {
   opening ??= (async () => {
+    user.value = name
     const vault = useVault()
-    let data = await vault.load<StoredData>(user)
+    let data = await vault.load<StoredData>(name)
     if (!data) {
-      const old = user === DEFAULT_OWNER ? await vault.readLegacy() : null
+      const old = name === DEFAULT_OWNER ? await vault.readLegacy() : null
       data = old
         ? {
             accounts: old.accounts as StoredData['accounts'],
@@ -140,6 +147,10 @@ export function useStore() {
     open,
     /** รอจนเปิดข้อมูลของผู้ใช้เสร็จ (หลัง login) */
     whenReady: () => ready,
+    /** ผู้ใช้คนนี้มีเงินเดือน (บัญชีรับเงินเดือน วันเงินเดือนออก) */
+    hasSalary,
+    /** ใช้กับฟังก์ชันรอบเดือนทั้งหมดแทน state.settings */
+    cycleSettings,
 
     setSyncConfig(patch: Partial<SyncConfig>) {
       Object.assign(state.syncConfig, patch)

@@ -10,9 +10,9 @@ const bankId = ref(props.initial?.bankId ?? '')
 const name = ref(props.initial?.name ?? '')
 const last4 = ref(props.initial?.last4 ?? '')
 const opening = ref(props.initial ? formatMoney(props.initial.openingBalance).replace(/,/g, '') : '')
-const { state } = useStore()
-// บัญชีแรกตั้งเป็นบัญชีรับเงินเดือนไว้ก่อน
-const salary = ref(props.initial?.salary ?? !state.accounts.some((a) => a.salary))
+const { state, hasSalary } = useStore()
+// บัญชีแรกตั้งเป็นบัญชีรับเงินเดือนไว้ก่อน (เฉพาะผู้ใช้ที่มีเงินเดือน)
+const salary = ref(props.initial?.salary ?? (hasSalary.value && !state.accounts.some((a) => a.salary)))
 const currentSalary = computed(() => state.accounts.find((a) => a.salary && a.id !== props.initial?.id))
 const error = ref('')
 
@@ -51,7 +51,7 @@ function submit() {
     <div class="card">
       <label class="field">
         <span>ชื่อบัญชี</span>
-        <input v-model="name" class="input" :placeholder="bankId ? `เช่น ${bankById(bankId).name} เงินเดือน` : 'เช่น บัญชีเงินเดือน'">
+        <input v-model="name" class="input" :placeholder="hasSalary ? (bankId ? `เช่น ${bankById(bankId).name} เงินเดือน` : 'เช่น บัญชีเงินเดือน') : 'เช่น บัญชีออมทรัพย์'">
       </label>
       <label class="field">
         <span>เลขบัญชี 4 ตัวท้าย (ไม่บังคับ)</span>
@@ -63,7 +63,7 @@ function submit() {
       </label>
     </div>
 
-    <label class="card mt-2.5 flex cursor-pointer items-start gap-3">
+    <label v-if="hasSalary" class="card mt-2.5 flex cursor-pointer items-start gap-3">
       <input v-model="salary" type="checkbox" class="mt-0.5 size-[22px] flex-none accent-accent">
       <div>
         <b>💼 บัญชีรับเงินเดือน</b>

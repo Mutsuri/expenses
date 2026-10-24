@@ -5,7 +5,7 @@ import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleShort, formatMoney } from '#shared/utils/format'
 import { balanceOf, inCycle, involves, summarize } from '#shared/utils/stats'
 
-const { state } = useStore()
+const { state, cycleSettings } = useStore()
 const route = useRoute()
 const id = route.params.id as string
 
@@ -14,8 +14,8 @@ const bank = computed(() => bankById(account.value?.bankId ?? 'other'))
 const txs = computed(() => state.transactions.filter((t) => involves(t, id)))
 
 const tab = ref<'list' | 'stats'>(route.query.tab === 'stats' ? 'stats' : 'list')
-const cycleKey = ref(cycleOf(todayISO(), state.settings).key)
-const cycle = computed(() => shiftCycle(cycleKey.value, 0, state.settings))
+const cycleKey = ref(cycleOf(todayISO(), cycleSettings.value).key)
+const cycle = computed(() => shiftCycle(cycleKey.value, 0, cycleSettings.value))
 
 const balance = computed(() => (account.value ? balanceOf(account.value, txs.value) : 0))
 const cycleTxs = computed(() => inCycle(txs.value, cycle.value))
@@ -23,7 +23,7 @@ const breakdownType = ref<'expense' | 'income'>('expense')
 
 const salaryIds = computed(() => new Set(state.accounts.filter((a) => a.salary).map((a) => a.id)))
 const history = computed(() =>
-  account.value ? accountCycles(account.value, state.transactions, state.settings, todayISO(), salaryIds.value) : [],
+  account.value ? accountCycles(account.value, state.transactions, cycleSettings.value, todayISO(), salaryIds.value) : [],
 )
 // รอบก่อนเปิดบัญชีไม่มีข้อมูล แสดงเป็นศูนย์
 const row = computed<CycleRow>(

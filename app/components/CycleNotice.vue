@@ -7,9 +7,9 @@ import { formatCycleLong, formatCycleShort, formatMoney } from '#shared/utils/fo
 import { accountCycles } from '#shared/utils/history'
 
 const KEY = 'expenses.seenCycle'
-const { state } = useStore()
+const { state, cycleSettings } = useStore()
 const today = todayISO()
-const current = computed(() => cycleOf(today, state.settings))
+const current = computed(() => cycleOf(today, cycleSettings.value))
 
 function readSeen(): string | null {
   try {
@@ -32,14 +32,14 @@ if (!seen.value) markSeen()
 const carried = computed(() =>
   state.accounts
     .map((a) => {
-      const row = accountCycles(a, state.transactions, state.settings, today).find((r) => r.cycle.key === current.value.key)
+      const row = accountCycles(a, state.transactions, cycleSettings.value, today).find((r) => r.cycle.key === current.value.key)
       return { id: a.id, name: a.name || bankById(a.bankId).name, amount: row?.carriedIn ?? 0 }
     })
     .filter((r) => r.amount !== 0),
 )
 const total = computed(() => carried.value.reduce((s, r) => s + r.amount, 0))
 const show = computed(() => seen.value !== null && seen.value < current.value.key)
-const prevLabel = computed(() => formatCycleShort(shiftCycle(current.value.key, -1, state.settings).key))
+const prevLabel = computed(() => formatCycleShort(shiftCycle(current.value.key, -1, cycleSettings.value).key))
 </script>
 
 <template>

@@ -5,7 +5,12 @@
 export interface CycleSettings {
   paydayDay: number
   holidays: string[]
+  /** รอบเดือน = เดือนปฏิทิน (วันที่ 1 ถึงสิ้นเดือน) ไม่เลื่อนตามวันหยุด */
+  calendar?: boolean
 }
+
+/** สำหรับผู้ใช้ที่ไม่มีเงินเดือน */
+export const CALENDAR_MONTH: CycleSettings = { paydayDay: 1, holidays: [], calendar: true }
 
 export interface Cycle {
   /** 'YYYY-MM' ตามเดือนที่เงินเดือนออก */
@@ -48,6 +53,7 @@ export function isWorkday(iso: string, holidays: ReadonlySet<string>): boolean {
 
 /** วันเงินเดือนออกจริงของเดือนนั้น (month: 1-12) */
 export function paydayOf(year: number, month: number, s: CycleSettings): string {
+  if (s.calendar) return `${year}-${pad(month)}-01`
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
   const holidays = new Set(s.holidays)
   let iso = `${year}-${pad(month)}-${pad(Math.min(s.paydayDay, lastDay))}`

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cycleOf, paydayOf, shiftCycle } from '../shared/utils/cycle'
+import { CALENDAR_MONTH, cycleOf, paydayOf, shiftCycle } from '../shared/utils/cycle'
 import { DEFAULT_HOLIDAYS } from '../shared/utils/holidays'
 
 const s = { paydayDay: 25, holidays: DEFAULT_HOLIDAYS }
@@ -41,5 +41,14 @@ describe('cycleOf', () => {
     expect(cycleOf('2027-01-10', s).key).toBe('2026-12')
     expect(shiftCycle('2026-12', 1, s).key).toBe('2027-01')
     expect(shiftCycle('2027-01', -1, s).key).toBe('2026-12')
+  })
+})
+
+describe('เดือนปฏิทิน (ผู้ใช้ที่ไม่มีเงินเดือน)', () => {
+  it('รอบเริ่มวันที่ 1 จบสิ้นเดือน แม้วันที่ 1 ตรงวันหยุด', () => {
+    // 1 พ.ย. 2569 เป็นวันอาทิตย์
+    expect(cycleOf('2026-11-01', CALENDAR_MONTH)).toEqual({ key: '2026-11', start: '2026-11-01', end: '2026-11-30' })
+    expect(cycleOf('2026-10-31', CALENDAR_MONTH)).toEqual({ key: '2026-10', start: '2026-10-01', end: '2026-10-31' })
+    expect(shiftCycle('2026-12', 1, CALENDAR_MONTH)).toEqual({ key: '2027-01', start: '2027-01-01', end: '2027-01-31' })
   })
 })

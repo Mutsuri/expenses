@@ -4,15 +4,16 @@ import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
 import { balanceOf, involves } from '#shared/utils/stats'
 
-const { state } = useStore()
+const { state, hasSalary, cycleSettings } = useStore()
 const { displayName } = useAuth()
 const today = todayISO()
 
-const cycle = computed(() => cycleOf(today, state.settings))
-const nextPayday = computed(() => shiftCycle(cycle.value.key, 1, state.settings).start)
-const paydayText = computed(() =>
-  today === cycle.value.start ? 'เงินเดือนออกวันนี้' : `อีก ${daysBetween(today, nextPayday.value)} วันเงินเดือนออก`,
-)
+const cycle = computed(() => cycleOf(today, cycleSettings.value))
+const nextPayday = computed(() => shiftCycle(cycle.value.key, 1, cycleSettings.value).start)
+const paydayText = computed(() => {
+  if (!hasSalary.value) return `อีก ${daysBetween(today, nextPayday.value)} วันขึ้นเดือนใหม่`
+  return today === cycle.value.start ? 'เงินเดือนออกวันนี้' : `อีก ${daysBetween(today, nextPayday.value)} วันเงินเดือนออก`
+})
 
 // บัญชีรับเงินเดือนขึ้นก่อน
 const accounts = computed(() =>
@@ -37,12 +38,12 @@ const accounts = computed(() =>
     <CycleNotice />
 
     <section class="rounded-[22px] bg-linear-135 from-[#2f6fed] to-[#6a4ff0] p-[18px] text-white">
-      <div class="text-[13px] opacity-85">รอบเงินเดือนนี้</div>
+      <div class="text-[13px] opacity-85">{{ hasSalary ? 'รอบเงินเดือนนี้' : 'เดือนนี้' }}</div>
       <div class="mt-0.5 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span class="text-2xl leading-[1.2] font-bold">{{ formatDay(cycle.start) }} – {{ formatDay(cycle.end) }}</span>
         <span class="rounded-full bg-white/20 px-2.5 py-px text-[13px] font-semibold">{{ paydayText }}</span>
       </div>
-      <div class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
+      <div v-if="hasSalary" class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
     </section>
 
     <div class="section-title">

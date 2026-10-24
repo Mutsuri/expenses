@@ -11,6 +11,7 @@ export const CATEGORIES: Record<TxType, Category[]> = {
     { id: 'game-topup', name: 'เติมเกม', icon: '💎' },
     { id: 'game-buy', name: 'ซื้อเกม', icon: '🎮' },
     { id: 'online-shop', name: 'ซื้อของออนไลน์', icon: '🛒' },
+    { id: 'mall-shop', name: 'ซื้อของในห้าง', icon: '🛍️' },
     { id: 'electricity', name: 'ค่าไฟ', icon: '⚡' },
     { id: 'internet', name: 'เน็ตบ้าน', icon: '🌐' },
     { id: 'mobile', name: 'ค่ามือถือ', icon: '📱' },

@@ -56,15 +56,16 @@ const accounts = computed(() =>
           <NuxtLink to="/accounts/new" class="font-semibold text-accent">+ เพิ่มบัญชี</NuxtLink>
         </div>
 
-        <div v-if="accounts.length" class="grid gap-2.5 xl:grid-cols-2">
+        <div v-if="accounts.length" class="grid gap-2.5">
           <NuxtLink v-for="a in accounts" :key="a.id" :to="`/accounts/${a.id}`" class="card flex items-center gap-3 transition-colors hover:bg-card-2">
             <BankLogo :bank-id="a.bankId" />
             <div class="min-w-0 flex-1">
-              <div class="truncate font-semibold">
-                {{ a.name || bankById(a.bankId).name }}
+              <!-- ชื่อยาวถูกตัดเฉพาะชื่อ ป้ายเงินเดือนแสดงเต็มเสมอ -->
+              <div class="flex items-center gap-1.5 font-semibold">
+                <span class="truncate">{{ a.name || bankById(a.bankId).name }}</span>
                 <span
                   v-if="a.salary"
-                  class="ml-1 rounded-full bg-card-2 px-2 pt-[3px] pb-0.5 align-[1px] text-[11px] font-semibold whitespace-nowrap text-accent"
+                  class="flex-none rounded-full bg-card-2 px-2 pt-[3px] pb-0.5 text-[11px] font-semibold whitespace-nowrap text-accent"
                 >
                   💼 รับเงินเดือน
                 </span>

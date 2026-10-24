@@ -70,6 +70,8 @@
     padding-top: calc(env(safe-area-inset-top) + 12px);
     padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
   }
+  /* หน้าที่มีข้อมูลมาก: บนจอกว้าง (PC) ขยายและแบ่งเป็นสองคอลัมน์ */
+  .page-wide { @apply lg:max-w-[1120px] lg:px-8; }
   .card { @apply rounded-card bg-card p-4 shadow-card; }
   .section-title { @apply mx-1 mt-6 mb-2 flex items-baseline justify-between text-sm font-semibold text-muted; }
 
@@ -88,4 +90,6 @@
     right: max(16px, calc(50% - 264px));
     bottom: calc(env(safe-area-inset-bottom) + 20px);
   }
+  /* ชิดขอบขวาของหน้ากว้าง */
+  .page-wide .fab { @apply lg:right-[max(32px,calc(50%-528px))] lg:bottom-8; }
 }

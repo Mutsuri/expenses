@@ -45,7 +45,7 @@ function view(t: Transaction): { icon: string; title: string; sub: string; peer?
         <span class="tabular-nums" :class="g.net >= 0 ? 'text-income' : 'text-expense'">{{ formatMoney(g.net, { sign: true }) }}</span>
       </div>
       <div class="card divide-y divide-line px-4 py-1">
-        <NuxtLink v-for="t in g.items" :key="t.id" :to="`/tx/${t.id}`" class="flex items-center gap-3 py-2.5">
+        <NuxtLink v-for="t in g.items" :key="t.id" :to="`/tx/${t.id}`" class="-mx-4 flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-card-2">
           <span class="grid size-9 flex-none place-items-center rounded-full bg-card-2 text-[22px]">{{ view(t).icon }}</span>
           <div class="min-w-0 flex-1">
             <div class="truncate">{{ view(t).title }}</div>

@@ -70,8 +70,11 @@ function snapshot(): StoredData {
 
 // บันทึกลง vault หลังข้อมูลเปลี่ยน (รวบหลายการแก้เป็นครั้งเดียว)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+// ลบข้อมูลในเครื่องแล้ว ห้ามบันทึกกลับ (ระหว่างรอรีโหลดหน้า)
+let wiped = false
 function persist() {
   clearTimeout(saveTimer)
+  if (wiped) return
   saveTimer = setTimeout(() => useVault().save(snapshot()), 300)
 }
 
@@ -86,7 +89,7 @@ function hydrate(data: StoredData) {
   state.ready = true
   watch(() => [state.accounts, state.transactions, state.settings, state.tombstones, state.syncConfig], persist, { deep: true })
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
+    if (document.visibilityState === 'hidden' && !wiped) {
       clearTimeout(saveTimer)
       useVault().save(snapshot())
     }
@@ -154,6 +157,12 @@ export function useStore() {
 
     setSyncConfig(patch: Partial<SyncConfig>) {
       Object.assign(state.syncConfig, patch)
+    },
+    /** ลบข้อมูลของผู้ใช้คนนี้ออกจากเครื่อง (ต้องรีโหลดหน้าต่อ) */
+    async wipe() {
+      wiped = true
+      clearTimeout(saveTimer)
+      await useVault().remove()
     },
 
     addAccount(a: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>): string {

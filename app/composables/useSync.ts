@@ -24,6 +24,11 @@ let manual = false
 
 const configured = () => Boolean(sync.url && sync.secret)
 
+/** เชื่อมชีตแล้ว = มีลิงก์ รหัสลับ และเคย sync สำเร็จอย่างน้อยครั้งหนึ่ง */
+export function isSheetLinked(c: { url: string; secret: string; lastSyncAt: number | null }) {
+  return Boolean(c.url && c.secret && c.lastSyncAt)
+}
+
 function saveConfig() {
   useStore().setSyncConfig({ url: sync.url, secret: sync.secret, lastSyncAt: sync.lastSyncAt })
 }
@@ -122,14 +127,16 @@ export function useSync() {
       manual = true
       await syncNow()
     },
-    disconnect() {
-      sync.url = ''
-      sync.secret = ''
-      sync.lastSyncAt = null
-      sync.status = 'off'
-      sync.error = ''
-      sync.pending = false
-      saveConfig()
+    /**
+     * เลิกเชื่อมต่อแล้วลบข้อมูลในเครื่องนี้ (ข้อมูลยังอยู่ในชีต)
+     * sync ให้สำเร็จก่อน ถ้าไม่สำเร็จจะไม่ลบ เพื่อไม่ให้รายการที่ยังไม่ขึ้นชีตหาย
+     */
+    async disconnect() {
+      manual = true
+      await syncNow()
+      if (sync.status !== 'idle' || sync.pending) throw new Error(sync.error || 'sync ไม่สำเร็จ')
+      await useStore().wipe()
+      window.location.replace(`${useRuntimeConfig().app.baseURL}connect`)
     },
   }
 }

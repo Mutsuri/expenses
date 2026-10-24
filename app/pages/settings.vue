@@ -37,15 +37,7 @@ function add() {
   newHoliday.value = ''
 }
 
-const { sync, syncByUser, configure, disconnect } = useSync()
-const sheetUrl = ref('')
-const sheetSecret = ref('')
-const showSecret = ref(false)
-// ค่าที่บันทึกไว้โหลดจาก IndexedDB ทีหลัง เติมให้เมื่อช่องยังว่าง
-watch(() => [sync.url, sync.secret] as const, ([url, secret]) => {
-  if (!sheetUrl.value) sheetUrl.value = url
-  if (!sheetSecret.value) sheetSecret.value = secret
-}, { immediate: true })
+const { sync, syncByUser, disconnect } = useSync()
 const syncedAgo = computed(() =>
   sync.lastSyncAt ? new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(sync.lastSyncAt) : 'ยังไม่เคย',
 )
@@ -55,27 +47,20 @@ const statusDot = computed(
   () => ({ off: 'bg-muted', idle: 'bg-income', syncing: 'bg-accent', error: 'bg-expense' })[sync.status],
 )
 
-const urlError = computed(() =>
-  sheetUrl.value && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(sheetUrl.value.trim())
-    ? 'ต้องเป็นลิงก์เว็บแอปที่ลงท้ายด้วย /exec (ไม่ใช่ลิงก์หน้าแก้โค้ด)'
-    : '',
-)
-
-function connect() {
-  if (urlError.value) return
-  configure(sheetUrl.value, sheetSecret.value)
-}
-
 const auth = useAuth()
 
 function logout() {
   auth.logout()
 }
 
-function unlink() {
-  disconnect()
-  sheetUrl.value = ''
-  sheetSecret.value = ''
+const unlinkError = ref('')
+async function unlink() {
+  unlinkError.value = ''
+  try {
+    await disconnect()
+  } catch (err) {
+    unlinkError.value = `ยังเลิกเชื่อมต่อไม่ได้ เพราะ sync ไม่สำเร็จ (${err instanceof Error ? err.message : err}) ข้อมูลในเครื่องยังไม่ถูกลบ`
+  }
 }
 </script>
 
@@ -93,43 +78,22 @@ function unlink() {
     <div class="card">
       <div class="mb-3.5 flex items-baseline gap-2 text-sm" :class="{ 'text-expense': sync.status === 'error' }">
         <span class="size-2 flex-none -translate-y-px rounded-full" :class="statusDot" />
-        <span v-if="sync.status === 'off'">ยังไม่ได้เชื่อมต่อ ข้อมูลอยู่ในเครื่องนี้อย่างเดียว</span>
+        <span v-if="sync.status === 'off'">ยังไม่ได้เชื่อมต่อ</span>
         <span v-else-if="sync.status === 'syncing'">กำลัง sync…</span>
         <span v-else-if="sync.status === 'error'">sync ไม่สำเร็จ: {{ sync.error }}</span>
         <span v-else>เชื่อมต่อแล้ว · sync ล่าสุด {{ syncedAgo }}</span>
       </div>
-      <form @submit.prevent="connect">
-        <label class="field">
-          <span>ลิงก์เว็บแอปของ Apps Script</span>
-          <input v-model="sheetUrl" class="input" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
-          <small v-if="urlError" class="mx-1 mt-1.5 block text-[13px] text-expense">{{ urlError }}</small>
-        </label>
-        <label class="field">
-          <span>รหัสลับ (ตรงกับ SECRET ใน Apps Script)</span>
-          <div class="relative">
-            <input v-model="sheetSecret" class="input pr-16" :type="showSecret ? 'text' : 'password'" autocomplete="off" autocapitalize="off" spellcheck="false">
-            <button
-              type="button"
-              class="absolute inset-y-0 right-0 px-3.5 text-[13px] font-semibold text-accent"
-              :aria-label="showSecret ? 'ซ่อนรหัสลับ' : 'แสดงรหัสลับ'"
-              @click.prevent="showSecret = !showSecret"
-            >
-              {{ showSecret ? 'ซ่อน' : 'แสดง' }}
-            </button>
-          </div>
-        </label>
-        <div class="flex flex-wrap gap-2">
-          <button class="btn btn-primary" type="submit" :disabled="!sheetUrl || !sheetSecret">บันทึกและ sync</button>
-          <button v-if="sync.status !== 'off'" class="btn" type="button" :disabled="sync.status === 'syncing'" @click="syncByUser()">sync ตอนนี้</button>
-        </div>
-      </form>
+      <SheetForm submit-label="บันทึกและ sync">
+        <button v-if="sync.status !== 'off'" class="btn" type="button" :disabled="sync.status === 'syncing'" @click="syncByUser()">sync ตอนนี้</button>
+      </SheetForm>
       <ConfirmButton
         v-if="sync.status !== 'off'"
-        class="mt-3 -ml-2 rounded-lg px-2 py-1 text-[13px] text-muted underline"
+        class="mt-3 -ml-2 rounded-lg px-2 py-1 text-left text-[13px] text-muted underline"
         label="เลิกเชื่อมต่อ"
-        confirm-label="แตะอีกครั้งเพื่อเลิกเชื่อมต่อ (ข้อมูลไม่หาย)"
+        confirm-label="แตะอีกครั้ง: sync แล้วลบข้อมูลในเครื่องนี้ (ข้อมูลในชีตยังอยู่)"
         @confirm="unlink"
       />
+      <p v-if="unlinkError" class="mt-1.5 text-[13px] text-expense">{{ unlinkError }}</p>
     </div>
 
     <!-- ผู้ใช้ที่ไม่มีเงินเดือนนับรอบตามเดือนปฏิทิน ไม่ต้องตั้งวันเงินเดือนและวันหยุด -->

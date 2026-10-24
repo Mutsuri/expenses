@@ -45,5 +45,10 @@ export function useVault() {
     async clearLegacy() {
       await Promise.all(LEGACY.map((k) => del(k)))
     },
+
+    /** ลบข้อมูลของผู้ใช้ที่เปิดอยู่ออกจากเครื่อง (กุญแจเก็บไว้ ผู้ใช้อื่นยังใช้) */
+    async remove() {
+      if (user) await del(vaultOf(user))
+    },
   }
 }

@@ -40,6 +40,7 @@ function add() {
 const { sync, syncByUser, configure, disconnect } = useSync()
 const sheetUrl = ref('')
 const sheetSecret = ref('')
+const showSecret = ref(false)
 // ค่าที่บันทึกไว้โหลดจาก IndexedDB ทีหลัง เติมให้เมื่อช่องยังว่าง
 watch(() => [sync.url, sync.secret] as const, ([url, secret]) => {
   if (!sheetUrl.value) sheetUrl.value = url
@@ -99,7 +100,17 @@ function unlink() {
         </label>
         <label class="field">
           <span>รหัสลับ (ตรงกับ SECRET ใน Apps Script)</span>
-          <input v-model="sheetSecret" class="input" type="password" autocomplete="off">
+          <div class="relative">
+            <input v-model="sheetSecret" class="input pr-16" :type="showSecret ? 'text' : 'password'" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <button
+              type="button"
+              class="absolute inset-y-0 right-0 px-3.5 text-[13px] font-semibold text-accent"
+              :aria-label="showSecret ? 'ซ่อนรหัสลับ' : 'แสดงรหัสลับ'"
+              @click.prevent="showSecret = !showSecret"
+            >
+              {{ showSecret ? 'ซ่อน' : 'แสดง' }}
+            </button>
+          </div>
         </label>
         <div class="flex flex-wrap gap-2">
           <button class="btn btn-primary" type="submit" :disabled="!sheetUrl || !sheetSecret">บันทึกและ sync</button>

@@ -46,10 +46,6 @@ function onKey(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 
-// แท่งในตารางแยกรายรอบ เทียบกับรอบที่รับหรือจ่ายสูงสุด
-const historyMax = computed(() => Math.max(1, ...history.value.flatMap((r) => [r.summary.income, r.summary.expense])))
-const pct = (v: number) => `${(v / historyMax.value) * 100}%`
-
 function pickCycle(key: string) {
   cycleKey.value = key
   tab.value = 'list'
@@ -123,33 +119,18 @@ function pickCycle(key: string) {
 
         <template v-else>
           <div class="section-title lg:mt-0"><span>แยกรายรอบ</span></div>
-          <!-- แต่ละรอบ: ชื่อรอบ | แท่งรับ-จ่ายพร้อมตัวเลข | คงเหลือ -->
+          <!-- คอลัมน์แรกชิดซ้าย ที่เหลือชิดขวา -->
           <div
-            class="card divide-y divide-line px-3 py-1 [&>*]:grid [&>*]:w-full [&>*]:grid-cols-[56px_1fr_auto] [&>*]:items-center [&>*]:gap-3 [&>*]:px-0.5 [&>*]:py-2.5"
+            class="card divide-y divide-line px-3 py-1 [&>*]:grid [&>*]:w-full [&>*]:grid-cols-[1.1fr_1fr_1fr_1fr] [&>*]:gap-1.5 [&>*]:px-0.5 [&>*]:py-2.5 [&>*]:text-right [&>*>span:first-child]:text-left"
           >
             <div class="text-xs text-muted">
-              <span>รอบ</span><span>รับ / จ่าย</span><span class="text-right">คงเหลือ</span>
+              <span>รอบ</span><span>รับ</span><span>จ่าย</span><span>คงเหลือ</span>
             </div>
-            <button
-              v-for="r in history"
-              :key="r.cycle.key"
-              class="text-left text-sm transition-colors hover:bg-card-2"
-              :class="{ 'font-semibold': r.cycle.key === cycleKey }"
-              :aria-label="`รอบ ${formatCycleShort(r.cycle.key)} รับ ${formatMoney(r.summary.income)} จ่าย ${formatMoney(r.summary.expense)} คงเหลือ ${formatMoney(r.summary.closing)}`"
-              @click="pickCycle(r.cycle.key)"
-            >
+            <button v-for="r in history" :key="r.cycle.key" class="text-sm transition-colors hover:text-accent" @click="pickCycle(r.cycle.key)">
               <span>{{ formatCycleShort(r.cycle.key) }}</span>
-              <span class="grid min-w-0 gap-1 text-xs font-normal tabular-nums">
-                <span class="flex items-center gap-1.5">
-                  <i v-if="r.summary.income" class="h-2 min-w-1 rounded-r-[4px] bg-income" :style="{ width: pct(r.summary.income) }" />
-                  <span class="flex-none">{{ formatMoney(r.summary.income, { short: true }) }}</span>
-                </span>
-                <span class="flex items-center gap-1.5">
-                  <i v-if="r.summary.expense" class="h-2 min-w-1 rounded-r-[4px] bg-expense" :style="{ width: pct(r.summary.expense) }" />
-                  <span class="flex-none">{{ formatMoney(r.summary.expense, { short: true }) }}</span>
-                </span>
-              </span>
-              <span class="text-right tabular-nums">{{ formatMoney(r.summary.closing, { short: true }) }}</span>
+              <span class="tabular-nums text-income">{{ formatMoney(r.summary.income, { short: true }) }}</span>
+              <span class="tabular-nums text-expense">{{ formatMoney(r.summary.expense, { short: true }) }}</span>
+              <span class="tabular-nums">{{ formatMoney(r.summary.closing, { short: true }) }}</span>
             </button>
           </div>
         </template>

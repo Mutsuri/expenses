@@ -126,3 +126,28 @@ export function groupByDay(txs: Transaction[], accountId: string): { date: strin
   }
   return groups
 }
+
+export interface AccountOverview {
+  account: Account
+  /** รับ/จ่ายของบัญชีนี้ในรอบ (รวมเงินโอนเข้า-ออก) */
+  summary: CycleSummary
+}
+
+/**
+ * ภาพรวมทุกบัญชีในรอบเดียวกัน
+ * แต่ละบัญชีนับเงินโอนเข้า-ออกด้วย ส่วนยอดรวมไม่นับการโอนระหว่างบัญชีของตัวเอง (ไม่ให้นับซ้ำ)
+ */
+export function overview(
+  accounts: Account[],
+  txs: Transaction[],
+  c: Cycle,
+  salaryIds: ReadonlySet<string> = new Set(),
+): { rows: AccountOverview[]; total: CycleSummary } {
+  const cycleTxs = inCycle(txs, c)
+  const rows = accounts.map((account) => {
+    const mine = txs.filter((t) => involves(t, account.id))
+    return { account, summary: summarize(inCycle(mine, c), balanceOf(account, mine, c.end), account.id, salaryIds) }
+  })
+  const totalClosing = rows.reduce((s, r) => s + r.summary.closing, 0)
+  return { rows, total: summarize(cycleTxs, totalClosing) }
+}

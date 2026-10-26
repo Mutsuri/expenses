@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseMoney, formatMoney } from '../shared/utils/format'
-import { balanceOf, groupByDay, summarize, type Account, type Transaction } from '../shared/utils/stats'
+import { balanceOf, groupByDay, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
 
 const acc: Account = { id: 'a', bankId: 'kbank', name: 'หลัก', last4: '', openingBalance: 100_00, createdAt: 0, updatedAt: 0 }
 const tx = (p: Partial<Transaction>): Transaction => ({
@@ -83,5 +83,30 @@ describe('transfers', () => {
   it('shows the daily net from each side', () => {
     expect(groupByDay(txs, 'a')[0]!.net).toBe(25000_00)
     expect(groupByDay(txs, 'b')[0]!.net).toBe(4700_00)
+  })
+})
+
+describe('overview', () => {
+  const salary: Account = { ...acc, id: 's', salary: true, openingBalance: 0 }
+  const spend: Account = { ...acc, id: 'p', openingBalance: 0 }
+  const cycle = { key: '2026-10', start: '2026-10-23', end: '2026-11-24' }
+  const txs = [
+    tx({ id: '1', accountId: 's', type: 'income', category: 'salary', amount: 30_000_00, date: '2026-10-23' }),
+    tx({ id: '2', accountId: 's', toAccountId: 'p', type: 'transfer', category: 'transfer', amount: 10_000_00, date: '2026-10-23' }),
+    tx({ id: '3', accountId: 'p', type: 'expense', category: 'food', amount: 500_00, date: '2026-10-24' }),
+    tx({ id: '4', accountId: 's', type: 'expense', category: 'electricity', amount: 1_000_00, date: '2026-10-25' }),
+    // รอบก่อน ไม่นับรับ-จ่าย แต่นับในยอดคงเหลือ
+    tx({ id: '5', accountId: 'p', type: 'income', category: 'side', amount: 200_00, date: '2026-10-01' }),
+  ]
+  const { rows, total } = overview([salary, spend], txs, cycle, new Set(['s']))
+
+  it('แต่ละบัญชีนับเงินโอนด้วย', () => {
+    expect(rows[0]!.summary).toMatchObject({ income: 30_000_00, expense: 11_000_00, closing: 19_000_00 })
+    expect(rows[1]!.summary).toMatchObject({ income: 10_000_00, expense: 500_00, closing: 9_700_00 })
+  })
+
+  it('ยอดรวมไม่นับโอนระหว่างบัญชี แต่ยอดคงเหลือรวมทุกบัญชี', () => {
+    expect(total).toMatchObject({ income: 30_000_00, expense: 1_500_00, closing: 28_700_00 })
+    expect(total.byCategory.map((c) => c.category)).toEqual(['salary', 'electricity', 'food'])
   })
 })

@@ -2,7 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
-import { balanceOf, involves } from '#shared/utils/stats'
+import { balanceOf, inCycle, involves, summarize } from '#shared/utils/stats'
 
 const { state, hasSalary, cycleSettings } = useStore()
 const { displayName } = useAuth()
@@ -24,6 +24,9 @@ const accounts = computed(() =>
       return { ...a, balance: balanceOf(a, txs) }
     }),
 )
+// รับ-จ่ายรวมทุกบัญชีรอบนี้ (ไม่นับโอนระหว่างบัญชี)
+const total = computed(() => summarize(inCycle(state.transactions, cycle.value), 0))
+const totalBalance = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
 </script>
 
 <template>
@@ -48,6 +51,18 @@ const accounts = computed(() =>
           </div>
           <div v-if="hasSalary" class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
         </section>
+
+        <NuxtLink v-if="accounts.length" to="/dashboard" class="card mt-2.5 block transition-colors hover:bg-card-2">
+          <div class="flex items-center justify-between text-[13px] text-muted">
+            <span>📊 ภาพรวมทุกบัญชีรอบนี้</span>
+            <span class="text-xl leading-none">›</span>
+          </div>
+          <div class="mt-0.5 text-[22px] font-bold tabular-nums">฿{{ formatMoney(totalBalance) }}</div>
+          <div class="mt-0.5 flex flex-wrap gap-x-3 text-sm font-semibold tabular-nums">
+            <span class="text-income">รับ {{ formatMoney(total.income) }}</span>
+            <span class="text-expense">จ่าย {{ formatMoney(total.expense) }}</span>
+          </div>
+        </NuxtLink>
       </div>
 
       <div>

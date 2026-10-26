@@ -2,7 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
-import { balanceOf, inCycle, involves, summarize } from '#shared/utils/stats'
+import { balanceOf, inCycle, inOverview, involves, summarize, summarizeGroup } from '#shared/utils/stats'
 
 const { state, hasSalary, cycleSettings } = useStore()
 const { displayName } = useAuth()
@@ -15,18 +15,22 @@ const paydayText = computed(() => {
   return today === cycle.value.start ? 'เงินเดือนออกวันนี้' : `อีก ${daysBetween(today, nextPayday.value)} วันเงินเดือนออก`
 })
 
-// บัญชีรับเงินเดือนขึ้นก่อน
+// บัญชีรับเงินเดือนขึ้นก่อน พร้อมรับ-จ่ายรอบนี้ของแต่ละบัญชี (รวมเงินโอน เหมือนหน้าบัญชี)
+const salaryIds = computed(() => new Set(state.accounts.filter((a) => a.salary).map((a) => a.id)))
 const accounts = computed(() =>
   [...state.accounts]
     .sort((a, b) => Number(!!b.salary) - Number(!!a.salary))
     .map((a) => {
       const txs = state.transactions.filter((t) => involves(t, a.id))
-      return { ...a, balance: balanceOf(a, txs) }
+      return { ...a, balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
     }),
 )
-// รับ-จ่ายรวมทุกบัญชีรอบนี้ (ไม่นับโอนระหว่างบัญชี)
-const total = computed(() => summarize(inCycle(state.transactions, cycle.value), 0))
-const totalBalance = computed(() => accounts.value.reduce((s, a) => s + a.balance, 0))
+// ภาพรวมรอบนี้ ไม่รวมบัญชีรับเงินเดือนและเงินสด (เหมือนหน้าภาพรวม)
+const others = computed(() => accounts.value.filter(inOverview))
+const total = computed(() =>
+  summarizeGroup(inCycle(state.transactions, cycle.value), 0, new Set(others.value.map((a) => a.id)), salaryIds.value),
+)
+const totalBalance = computed(() => others.value.reduce((s, a) => s + a.balance, 0))
 </script>
 
 <template>
@@ -52,7 +56,7 @@ const totalBalance = computed(() => accounts.value.reduce((s, a) => s + a.balanc
           <div v-if="hasSalary" class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
         </section>
 
-        <NuxtLink v-if="accounts.length" to="/dashboard" class="card mt-2.5 block transition-colors hover:bg-card-2">
+        <NuxtLink v-if="others.length" to="/dashboard" class="card mt-2.5 block transition-colors hover:bg-card-2">
           <div class="flex items-center justify-between text-[13px] text-muted">
             <span>📊 ภาพรวมทุกบัญชีรอบนี้</span>
             <span class="text-xl leading-none">›</span>
@@ -80,13 +84,14 @@ const totalBalance = computed(() => accounts.value.reduce((s, a) => s + a.balanc
                 <span class="truncate">{{ a.name || bankById(a.bankId).name }}</span>
                 <span
                   v-if="a.salary"
-                  class="flex-none rounded-full bg-card-2 px-2 pt-[3px] pb-0.5 text-[11px] font-semibold whitespace-nowrap text-accent"
+                  class="flex-none -translate-y-0.5 rounded-full bg-card-2 px-2 pt-[3px] pb-0.5 text-[11px] font-semibold whitespace-nowrap text-accent"
                 >
                   💼 รับเงินเดือน
                 </span>
               </div>
-              <div class="text-[13px] text-muted">
-                {{ bankById(a.bankId).name }}<template v-if="a.last4"> · •••{{ a.last4 }}</template>
+              <div class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
+                <span class="text-income">รับ {{ formatMoney(a.cycle.income) }}</span>
+                <span class="text-expense">จ่าย {{ formatMoney(a.cycle.expense) }}</span>
               </div>
             </div>
             <div class="text-right text-[17px] font-bold tabular-nums">{{ formatMoney(a.balance) }}</div>

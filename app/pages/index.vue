@@ -59,7 +59,7 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
           <div v-if="hasSalary" class="mt-3 border-t border-white/25 pt-2.5 text-xs opacity-85">เงินเดือนรอบหน้า: {{ formatWeekdayYear(nextPayday) }}</div>
         </section>
 
-        <NuxtLink v-if="others.length" to="/dashboard" class="card mt-2.5 block transition-colors hover:bg-card-2">
+        <NuxtLink v-if="others.length" to="/dashboard" class="card mt-2.5 block transition-colors hover:bg-card-2" :class="{ 'pb-3': cards.length }">
           <div class="flex items-center justify-between text-[13px] text-muted">
             <span>📊 ภาพรวมทุกบัญชีรอบนี้</span>
             <span class="text-xl leading-none">›</span>
@@ -69,7 +69,8 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
             <span class="text-income">รับ {{ formatMoney(total.income) }}</span>
             <span class="text-expense">จ่าย {{ formatMoney(total.expense) }}</span>
           </div>
-          <div v-if="cards.length" class="mt-2 border-t border-line pt-2 text-sm tabular-nums">
+          <!-- เว้นเหนือและใต้บรรทัดบัตรเท่ากัน (pt-3 กับ pb-3 ของการ์ด) -->
+          <div v-if="cards.length" class="mt-3 border-t border-line pt-3 text-sm tabular-nums">
             <span class="text-muted">💳 บัตรเครดิตใช้ไป</span> <b class="text-expense">{{ formatMoney(cardsSpent) }}</b>
           </div>
         </NuxtLink>

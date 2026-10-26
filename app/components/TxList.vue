@@ -4,8 +4,8 @@ import { categoryById } from '#shared/utils/categories'
 import { formatMoney, formatWeekday } from '#shared/utils/format'
 import { groupByDay, signedFor, type Transaction } from '#shared/utils/stats'
 
-// accountId = บัญชีที่กำลังดู ใช้บอกว่าการโอนเป็นเข้าหรือออก
-const props = defineProps<{ items: Transaction[]; accountId: string }>()
+// accountId = บัญชีที่กำลังดู ใช้บอกว่าการโอนเป็นเข้าหรือออก, filtered = มีตัวกรองอยู่ (ข้อความตอนไม่มีรายการ)
+const props = defineProps<{ items: Transaction[]; accountId: string; filtered?: boolean }>()
 const { state } = useStore()
 const groups = computed(() => groupByDay(props.items, props.accountId))
 
@@ -40,10 +40,7 @@ function view(t: Transaction): { icon: string; title: string; sub: string; peer?
 <template>
   <div v-if="groups.length">
     <div v-for="g in groups" :key="g.date">
-      <div class="mx-1 mt-4 mb-1.5 flex justify-between text-[13px] text-muted">
-        <span>{{ formatWeekday(g.date) }}</span>
-        <span class="tabular-nums" :class="g.net >= 0 ? 'text-income' : 'text-expense'">{{ formatMoney(g.net, { sign: true }) }}</span>
-      </div>
+      <div class="mx-1 mt-4 mb-1.5 text-[13px] text-muted">{{ formatWeekday(g.date) }}</div>
       <div class="card divide-y divide-line px-4 py-1">
         <NuxtLink v-for="t in g.items" :key="t.id" :to="`/tx/${t.id}`" class="-mx-4 flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-card-2">
           <span class="grid size-9 flex-none place-items-center rounded-full bg-card-2 text-[22px]">{{ view(t).icon }}</span>
@@ -59,5 +56,6 @@ function view(t: Transaction): { icon: string; title: string; sub: string; peer?
       </div>
     </div>
   </div>
+  <div v-else-if="filtered" class="card px-4 py-7 text-center text-muted">ไม่มีรายการที่ตรงกับตัวกรอง</div>
   <div v-else class="card px-4 py-7 text-center text-muted">ยังไม่มีรายการในรอบนี้<br>กดปุ่ม + เพื่อจด</div>
 </template>

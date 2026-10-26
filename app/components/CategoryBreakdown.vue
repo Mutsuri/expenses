@@ -59,9 +59,9 @@ const items = (category: string) =>
         <span v-if="itemsFor" class="w-4 text-center text-muted transition-transform" :class="{ 'rotate-90': open.has(r.category) }" aria-hidden="true">›</span>
       </component>
 
-      <!-- รายการในหมวดนี้ แตะเพื่อแก้ไข -->
+      <!-- รายการในหมวดนี้ (ดูอย่างเดียว แก้ไขที่หน้าบัญชี) -->
       <div v-if="itemsFor && open.has(r.category)" class="mb-2 ml-11 divide-y divide-line rounded-xl bg-card-2 px-3">
-        <NuxtLink v-for="t in items(r.category)" :key="t.id" :to="`/tx/${t.id}`" class="flex items-center gap-3 py-2 text-sm">
+        <div v-for="t in items(r.category)" :key="t.id" class="flex items-center gap-3 py-2 text-sm">
           <span class="w-14 flex-none text-[13px] text-muted">{{ formatDay(t.date) }}</span>
           <div class="min-w-0 flex-1">
             <div class="truncate">{{ t.note || r.cat.name }}</div>
@@ -70,7 +70,7 @@ const items = (category: string) =>
             </div>
           </div>
           <span class="flex-none tabular-nums">{{ formatMoney(t.amount) }}</span>
-        </NuxtLink>
+        </div>
       </div>
     </div>
   </div>

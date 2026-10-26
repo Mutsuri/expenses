@@ -25,13 +25,15 @@ const accounts = computed(() =>
       return { ...a, credit: isCredit(a), balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
     }),
 )
-// ภาพรวมรอบนี้ ไม่รวมบัญชีรับเงินเดือนและเงินสด (เหมือนหน้าภาพรวม)
+// ภาพรวมรอบนี้ ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต (เหมือนหน้าภาพรวม)
 const others = computed(() => accounts.value.filter(inOverview))
 const total = computed(() =>
   summarizeGroup(inCycle(state.transactions, cycle.value), 0, new Set(others.value.map((a) => a.id)), salaryIds.value),
 )
-// บัตรเครดิตนับรายจ่าย แต่ไม่นับในยอดเงินรวม
-const totalBalance = computed(() => others.value.reduce((s, a) => s + (a.credit ? 0 : a.balance), 0))
+const totalBalance = computed(() => others.value.reduce((s, a) => s + a.balance, 0))
+// บัตรเครดิตแยกไว้อีกบรรทัด ไม่รวมกับรายจ่ายด้านบน
+const cards = computed(() => accounts.value.filter((a) => a.credit))
+const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expense, 0))
 </script>
 
 <template>
@@ -66,6 +68,9 @@ const totalBalance = computed(() => others.value.reduce((s, a) => s + (a.credit 
           <div class="mt-0.5 flex flex-wrap gap-x-3 text-sm font-semibold tabular-nums">
             <span class="text-income">รับ {{ formatMoney(total.income) }}</span>
             <span class="text-expense">จ่าย {{ formatMoney(total.expense) }}</span>
+          </div>
+          <div v-if="cards.length" class="mt-2 border-t border-line pt-2 text-sm tabular-nums">
+            <span class="text-muted">💳 บัตรเครดิตใช้ไป</span> <b class="text-expense">{{ formatMoney(cardsSpent) }}</b>
           </div>
         </NuxtLink>
       </div>

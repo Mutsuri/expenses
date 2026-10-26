@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseMoney, formatMoney } from '../shared/utils/format'
-import { balanceOf, groupByDay, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
+import { balanceOf, groupByDay, groupCategoryOf, inOverview, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
 
 const acc: Account = { id: 'a', bankId: 'kbank', name: 'หลัก', last4: '', openingBalance: 100_00, createdAt: 0, updatedAt: 0 }
 const tx = (p: Partial<Transaction>): Transaction => ({
@@ -108,5 +108,47 @@ describe('overview', () => {
   it('ยอดรวมไม่นับโอนระหว่างบัญชี แต่ยอดคงเหลือรวมทุกบัญชี', () => {
     expect(total).toMatchObject({ income: 30_000_00, expense: 1_500_00, closing: 28_700_00 })
     expect(total.byCategory.map((c) => c.category)).toEqual(['salary', 'electricity', 'food'])
+  })
+})
+
+describe('overview ไม่รวมบัญชีเงินเดือน', () => {
+  const salary: Account = { ...acc, id: 's', salary: true, openingBalance: 0 }
+  const spend: Account = { ...acc, id: 'p', openingBalance: 0 }
+  const save: Account = { ...acc, id: 'v', openingBalance: 0 }
+  const cycle = { key: '2026-10', start: '2026-10-23', end: '2026-11-24' }
+  const txs = [
+    tx({ id: '1', accountId: 's', type: 'income', category: 'salary', amount: 30_000_00, date: '2026-10-23' }),
+    tx({ id: '2', accountId: 's', toAccountId: 'p', type: 'transfer', category: 'transfer', amount: 10_000_00, date: '2026-10-23' }),
+    tx({ id: '3', accountId: 'p', toAccountId: 'v', type: 'transfer', category: 'transfer', amount: 2_000_00, date: '2026-10-24' }),
+    tx({ id: '4', accountId: 'p', type: 'expense', category: 'food', amount: 500_00, date: '2026-10-24' }),
+    tx({ id: '5', accountId: 'v', toAccountId: 's', type: 'transfer', category: 'transfer', amount: 100_00, date: '2026-10-25' }),
+    tx({ id: '6', accountId: 's', type: 'expense', category: 'electricity', amount: 1_000_00, date: '2026-10-25' }),
+  ]
+  const { rows, total } = overview([spend, save], txs, cycle, new Set(['s']))
+
+  it('โอนจากบัญชีเงินเดือนนับเป็นรายรับ โอนกันเองในกลุ่มไม่นับ รายการของบัญชีเงินเดือนไม่นับ', () => {
+    expect(rows.map((r) => r.account.id)).toEqual(['p', 'v'])
+    expect(total).toMatchObject({ income: 10_000_00, expense: 600_00, closing: 9_400_00 })
+    expect(total.byCategory.map((c) => `${c.type}:${c.category}`)).toEqual(['income:salary', 'expense:food', 'expense:transfer-out'])
+  })
+})
+
+describe('inOverview', () => {
+  it('ไม่นับบัญชีรับเงินเดือนและเงินสด', () => {
+    expect(inOverview({ ...acc, salary: true })).toBe(false)
+    expect(inOverview({ ...acc, bankId: 'cash' })).toBe(false)
+    expect(inOverview(acc)).toBe(true)
+  })
+})
+
+describe('groupCategoryOf', () => {
+  const ids = new Set(['p', 'v'])
+  const salaryIds = new Set(['s'])
+  it('หมวดของรายการเมื่อมองทั้งกลุ่ม', () => {
+    expect(groupCategoryOf(tx({ accountId: 'p', type: 'expense', category: 'food' }), ids, salaryIds)).toEqual({ type: 'expense', category: 'food' })
+    expect(groupCategoryOf(tx({ accountId: 's', type: 'expense', category: 'food' }), ids, salaryIds)).toBeNull()
+    expect(groupCategoryOf(tx({ accountId: 's', toAccountId: 'p', type: 'transfer' }), ids, salaryIds)).toEqual({ type: 'income', category: 'salary' })
+    expect(groupCategoryOf(tx({ accountId: 'p', toAccountId: 'v', type: 'transfer' }), ids, salaryIds)).toBeNull()
+    expect(groupCategoryOf(tx({ accountId: 'p', toAccountId: 'c', type: 'transfer' }), ids, salaryIds)).toEqual({ type: 'expense', category: 'transfer-out' })
   })
 })

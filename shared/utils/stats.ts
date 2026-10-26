@@ -133,9 +133,53 @@ export interface AccountOverview {
   summary: CycleSummary
 }
 
+/** บัญชีที่นับในภาพรวม: ไม่รวมบัญชีรับเงินเดือนและเงินสด */
+export const inOverview = (a: Account) => !a.salary && a.bankId !== 'cash'
+
 /**
- * ภาพรวมทุกบัญชีในรอบเดียวกัน
- * แต่ละบัญชีนับเงินโอนเข้า-ออกด้วย ส่วนยอดรวมไม่นับการโอนระหว่างบัญชีของตัวเอง (ไม่ให้นับซ้ำ)
+ * หมวดของรายการเมื่อมองทั้งกลุ่มบัญชี (null = ไม่นับ): โอนกันเองภายในกลุ่มไม่นับ
+ * โอนเข้ามาจากนอกกลุ่ม = รายรับ (หมวด 'salary' ถ้ามาจากบัญชีรับเงินเดือน), โอนออกไปนอกกลุ่ม = รายจ่าย
+ */
+export function groupCategoryOf(
+  t: Transaction,
+  ids: ReadonlySet<string>,
+  salaryIds: ReadonlySet<string> = new Set(),
+): { type: TxType; category: string } | null {
+  const fromIn = ids.has(t.accountId)
+  if (t.type !== 'transfer') return fromIn ? { type: t.type, category: t.category } : null
+  const toIn = !!t.toAccountId && ids.has(t.toAccountId)
+  if (fromIn && !toIn) return { type: 'expense', category: TRANSFER_OUT }
+  if (toIn && !fromIn) return { type: 'income', category: salaryIds.has(t.accountId) ? 'salary' : TRANSFER_IN }
+  return null
+}
+
+/** สรุปรวมของกลุ่มบัญชี นับหมวดตาม groupCategoryOf */
+export function summarizeGroup(
+  txs: Transaction[],
+  closing: number,
+  ids: ReadonlySet<string>,
+  salaryIds: ReadonlySet<string> = new Set(),
+): CycleSummary {
+  let income = 0
+  let expense = 0
+  const cats = new Map<string, { type: TxType; category: string; amount: number }>()
+  for (const t of txs) {
+    const c = groupCategoryOf(t, ids, salaryIds)
+    if (!c) continue
+    if (c.type === 'income') income += t.amount
+    else expense += t.amount
+    const key = `${c.type}:${c.category}`
+    const row = cats.get(key) ?? { ...c, amount: 0 }
+    row.amount += t.amount
+    cats.set(key, row)
+  }
+  const byCategory = [...cats.values()].sort((a, b) => b.amount - a.amount)
+  return { income, expense, net: income - expense, closing, byCategory }
+}
+
+/**
+ * ภาพรวมของบัญชีที่ส่งมา ในรอบเดียวกัน
+ * แต่ละบัญชีนับเงินโอนเข้า-ออกด้วย ส่วนยอดรวมไม่นับการโอนกันเองระหว่างบัญชีในกลุ่ม (ไม่ให้นับซ้ำ)
  */
 export function overview(
   accounts: Account[],
@@ -149,5 +193,6 @@ export function overview(
     return { account, summary: summarize(inCycle(mine, c), balanceOf(account, mine, c.end), account.id, salaryIds) }
   })
   const totalClosing = rows.reduce((s, r) => s + r.summary.closing, 0)
-  return { rows, total: summarize(cycleTxs, totalClosing) }
+  const ids = new Set(accounts.map((a) => a.id))
+  return { rows, total: summarizeGroup(cycleTxs, totalClosing, ids, salaryIds) }
 }

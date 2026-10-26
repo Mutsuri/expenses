@@ -3,7 +3,7 @@ import { bankById } from '#shared/utils/banks'
 import { accountCycles, type CycleRow } from '#shared/utils/history'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleShort, formatMoney } from '#shared/utils/format'
-import { balanceOf, inCycle, involves, isCredit, summarize } from '#shared/utils/stats'
+import { balanceOf, inCycle, involves, isCredit, signedFor, summarize, type Transaction } from '#shared/utils/stats'
 
 const { state, cycleSettings } = useStore()
 const route = useRoute()
@@ -38,6 +38,13 @@ const row = computed<CycleRow>(
       summary: summarize([], 0),
     },
 )
+
+// ตัวกรองรายการ: รับ/จ่าย มองจากบัญชีนี้ (โอนเข้า = รับ, โอนออก = จ่าย)
+const filterDir = ref<'all' | 'income' | 'expense'>('all')
+const dirOf = (t: Transaction) => (signedFor(t, id) >= 0 ? 'income' : 'expense')
+const shownTxs = computed(() => cycleTxs.value.filter((t) => filterDir.value === 'all' || dirOf(t) === filterDir.value))
+const filtering = computed(() => filterDir.value !== 'all')
+
 // PC: กด N เพื่อจดรายการ
 const router = useRouter()
 function onKey(e: KeyboardEvent) {
@@ -58,17 +65,15 @@ function pickCycle(key: string) {
 
 <template>
   <main v-if="account" class="page page-wide">
-    <TopBar :title="account.name" back="/">
-      <NuxtLink :to="`/accounts/${id}/edit`" class="p-2 font-semibold text-accent">แก้ไข</NuxtLink>
-    </TopBar>
-
-    <!-- จอกว้าง: ยอดเงินและสรุปซ้าย รายการหรือตารางขวา -->
+    <!-- จอกว้าง: หัวหน้า ยอดเงินและสรุปซ้าย รายการหรือตารางขวา (เริ่มแถวเดียวกับหัวหน้า) -->
     <div class="lg:grid lg:grid-cols-[400px_1fr] lg:items-start lg:gap-8">
       <div>
-        <section class="card flex items-center gap-3.5">
+        <TopBar :title="account.name" back="/" />
+        <!-- บรรทัดล่างตัวเล็ก (ป้ายเงินเดือน/ใช้ไปรอบนี้) ดูชิดขอบล่าง: เว้นล่างเพิ่มให้ดูเท่ากับด้านบน -->
+        <section class="card flex items-center gap-3.5" :class="{ 'pb-5': account.salary || credit }">
           <BankLogo :bank-id="account.bankId" :size="52" />
-          <div>
-            <div class="text-[13px] text-muted">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[13px] leading-4 text-muted">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
             <template v-if="credit">
               <div class="text-[28px] leading-[1.2] font-bold tabular-nums text-expense">฿{{ formatMoney(spentNow) }}</div>
               <div class="mt-0.5 text-xs text-muted">ใช้ไปรอบนี้</div>
@@ -76,6 +81,7 @@ function pickCycle(key: string) {
             <div v-else class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(balance) }}</div>
             <div v-if="account.salary" class="mt-0.5 text-xs font-semibold text-accent">💼 บัญชีรับเงินเดือน</div>
           </div>
+          <NuxtLink :to="`/accounts/${id}/edit`" class="-mr-1 self-start p-1 text-sm font-semibold text-accent">แก้ไข</NuxtLink>
         </section>
 
         <div class="mt-4 mb-3 grid grid-cols-2 rounded-[14px] bg-card-2 p-1">
@@ -120,12 +126,26 @@ function pickCycle(key: string) {
 
       <div>
         <template v-if="tab === 'list'">
-          <div class="section-title lg:mt-0"><span>รายการ ({{ cycleTxs.length }})</span></div>
-          <TxList :items="cycleTxs" :account-id="id" />
+          <div class="section-title lg:mt-0 lg:mb-2 lg:min-h-12 lg:items-center">
+            <span>รายการ ({{ filtering ? `${shownTxs.length}/${cycleTxs.length}` : cycleTxs.length }})</span>
+            <span class="inline-flex rounded-[10px] bg-card-2 p-0.5">
+              <button
+                v-for="t in [{ key: 'all', label: 'ทั้งหมด' }, { key: 'income', label: 'รับ' }, { key: 'expense', label: 'จ่าย' }] as const"
+                :key="t.key"
+                type="button"
+                class="rounded-lg px-3 py-0.5 text-[13px] font-semibold"
+                :class="filterDir === t.key ? 'bg-card text-ink shadow-card' : 'text-muted'"
+                @click="filterDir = t.key"
+              >
+                {{ t.label }}
+              </button>
+            </span>
+          </div>
+          <TxList :items="shownTxs" :account-id="id" :filtered="filtering" />
         </template>
 
         <template v-else>
-          <div class="section-title lg:mt-0"><span>แยกรายรอบ</span></div>
+          <div class="section-title lg:mt-0 lg:mb-2 lg:min-h-12 lg:items-center"><span>แยกรายรอบ</span></div>
           <!-- คอลัมน์แรกชิดซ้าย ที่เหลือชิดขวา -->
           <div
             class="card divide-y divide-line px-3 py-1 [&>*]:grid [&>*]:w-full [&>*]:grid-cols-[1.1fr_1fr_1fr_1fr] [&>*]:gap-1.5 [&>*]:px-0.5 [&>*]:py-2.5 [&>*]:text-right [&>*>span:first-child]:text-left"

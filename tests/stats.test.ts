@@ -154,17 +154,7 @@ describe('groupCategoryOf', () => {
 })
 
 describe('บัตรเครดิตในภาพรวม', () => {
-  const bank: Account = { ...acc, id: 'b', openingBalance: 5_000_00 }
-  const card: Account = { ...acc, id: 'c', bankId: 'credit', openingBalance: 0 }
-  const cycle = { key: '2026-10', start: '2026-10-23', end: '2026-11-24' }
-  const txs = [
-    tx({ id: '1', accountId: 'b', type: 'expense', category: 'food', amount: 200_00, date: '2026-10-24' }),
-    tx({ id: '2', accountId: 'c', type: 'expense', category: 'mall-shop', amount: 1_500_00, date: '2026-10-25' }),
-  ]
-  const { rows, total } = overview([bank, card], txs, cycle)
-
-  it('นับรายจ่ายของบัตร แต่ไม่นับยอดติดลบของบัตรในยอดเงินรวม', () => {
-    expect(rows[1]!.summary.expense).toBe(1_500_00)
-    expect(total).toMatchObject({ expense: 1_700_00, closing: 4_800_00 })
+  it('ไม่นับบัตรเครดิต', () => {
+    expect(inOverview({ ...acc, bankId: 'credit' })).toBe(false)
   })
 })

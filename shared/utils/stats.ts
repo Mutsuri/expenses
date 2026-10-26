@@ -136,8 +136,8 @@ export interface AccountOverview {
 /** บัตรเครดิต: จดได้แค่รายจ่าย แสดงยอดใช้ไปของรอบแทนยอดคงเหลือ */
 export const isCredit = (a: Pick<Account, 'bankId'>) => a.bankId === 'credit'
 
-/** บัญชีที่นับในภาพรวม: ไม่รวมบัญชีรับเงินเดือนและเงินสด (บัตรเครดิตนับรายจ่าย แต่ไม่นับในยอดเงินรวม) */
-export const inOverview = (a: Account) => !a.salary && a.bankId !== 'cash'
+/** บัญชีที่นับในภาพรวม: ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต */
+export const inOverview = (a: Account) => !a.salary && a.bankId !== 'cash' && !isCredit(a)
 
 /**
  * หมวดของรายการเมื่อมองทั้งกลุ่มบัญชี (null = ไม่นับ): โอนกันเองภายในกลุ่มไม่นับ
@@ -195,7 +195,7 @@ export function overview(
     const mine = txs.filter((t) => involves(t, account.id))
     return { account, summary: summarize(inCycle(mine, c), balanceOf(account, mine, c.end), account.id, salaryIds) }
   })
-  const totalClosing = rows.reduce((s, r) => s + (isCredit(r.account) ? 0 : r.summary.closing), 0)
+  const totalClosing = rows.reduce((s, r) => s + r.summary.closing, 0)
   const ids = new Set(accounts.map((a) => a.id))
   return { rows, total: summarizeGroup(cycleTxs, totalClosing, ids, salaryIds) }
 }

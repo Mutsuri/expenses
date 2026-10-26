@@ -6,7 +6,8 @@ import { formatMoney, parseMoney } from '#shared/utils/format'
 import { isCredit, type Transaction, type TxKind } from '#shared/utils/stats'
 
 const props = defineProps<{ initial?: Transaction; accountId?: string; type?: TxKind }>()
-const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>] }>()
+// months: จดเป็นรายการผ่อน (เฉพาะรายจ่ายใหม่บนบัตรเครดิต)
+const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>, months?: number] }>()
 const { state, hasSalary } = useStore()
 // ผู้ใช้ที่ไม่มีเงินเดือนไม่ต้องมีหมวดเงินเดือน
 const categories = computed(() => ({
@@ -44,6 +45,16 @@ const tabs = computed(() =>
 const label = (a: { name: string; bankId: string; salary?: boolean }) => `${a.name} (${bankById(a.bankId).name})${a.salary ? ' 💼' : ''}`
 const targets = computed(() => cashAccounts.value.filter((a) => a.id !== accountId.value))
 
+// ผ่อน: เฉพาะตอนจดรายจ่ายใหม่บนบัตรเครดิต (งวดที่สร้างแล้วแก้ทีละงวด)
+const installment = ref(false)
+const months = ref(10)
+const MONTHS = [2, 3, 4, 6, 10, 12, 18, 24, 36]
+const canInstall = computed(() => !props.initial && type.value === 'expense' && onCredit.value)
+const perMonth = computed(() => {
+  const v = parseMoney(amount.value)
+  return v ? formatMoney(Math.floor(v / months.value)) : ''
+})
+
 watch(type, (t) => {
   error.value = ''
   if (t !== 'expense' && onCredit.value) accountId.value = cashAccounts.value[0]?.id ?? ''
@@ -69,11 +80,16 @@ function submit() {
       date: date.value, note: note.value.trim(),
     })
   }
+  if (canInstall.value && installment.value && value < months.value) return (error.value = 'ยอดน้อยเกินกว่าจะแบ่งงวด')
   // toAccountId: undefined ล้างค่าเดิมเมื่อแก้รายการโอนเป็นรายรับ/รายจ่าย
-  emit('save', {
-    type: type.value, amount: value, category: category.value, accountId: accountId.value, toAccountId: undefined,
-    date: date.value, note: note.value.trim(),
-  })
+  emit(
+    'save',
+    {
+      type: type.value, amount: value, category: category.value, accountId: accountId.value, toAccountId: undefined,
+      date: date.value, note: note.value.trim(),
+    },
+    canInstall.value && installment.value ? months.value : undefined,
+  )
 }
 </script>
 
@@ -136,6 +152,19 @@ function submit() {
           <option v-for="a in targets" :key="a.id" :value="a.id">{{ label(a) }}</option>
         </select>
       </label>
+      <div v-if="canInstall" class="field">
+        <label class="flex cursor-pointer items-center gap-2.5">
+          <input v-model="installment" type="checkbox" class="size-[22px] flex-none accent-accent">
+          <b>ผ่อนชำระ</b>
+        </label>
+        <div v-if="installment" class="mt-2 flex items-center gap-2">
+          <select v-model.number="months" class="input w-auto">
+            <option v-for="m in MONTHS" :key="m" :value="m">{{ m }} เดือน</option>
+          </select>
+          <span v-if="perMonth" class="text-sm text-muted">งวดละ ~{{ perMonth }}</span>
+        </div>
+        <p v-if="installment" class="mx-1 mt-1.5 text-[13px] text-muted">นับเป็นรายจ่ายรอบละงวด งวดแรกวันที่ซื้อ งวดต่อไปวันแรกของรอบถัด ๆ ไป</p>
+      </div>
       <label class="field">
         <span>วันที่</span>
         <input v-model="date" type="date" class="input" required>

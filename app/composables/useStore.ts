@@ -1,6 +1,7 @@
 // ข้อมูลทั้งหมดเก็บในเครื่องแบบเข้ารหัส (useVault) แล้ว sync กับ Google Sheet ผ่าน useSync
 import { CALENDAR_MONTH } from '#shared/utils/cycle'
 import { DEFAULT_HOLIDAYS } from '#shared/utils/holidays'
+import { installmentOf, planInstallments } from '#shared/utils/installment'
 import { DEFAULT_OWNER, usesSalary } from '#shared/utils/users'
 import { involves, type Account, type Transaction } from '#shared/utils/stats'
 import { mergeRemote, mergeSettings, type Settings, type SyncResponse, type Tombstone } from '#shared/utils/sync'
@@ -207,6 +208,20 @@ export function useStore() {
     removeTransaction(id: string) {
       state.transactions = state.transactions.filter((t) => t.id !== id)
       bury('transaction', [id])
+      onLocalChange()
+    },
+    /** จดรายจ่ายแบบผ่อน: สร้างรายการทีละงวด รอบละงวด */
+    addInstallments(t: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>, months: number) {
+      const now = Date.now()
+      const plan = planInstallments(t, months, newId(), cycleSettings.value)
+      state.transactions.push(...plan.map((x) => ({ ...x, createdAt: now, updatedAt: now })))
+      onLocalChange()
+    },
+    /** ลบทุกงวดของแผนผ่อน */
+    removePlan(planId: string) {
+      const ids = state.transactions.filter((t) => installmentOf(t.id)?.planId === planId).map((t) => t.id)
+      state.transactions = state.transactions.filter((t) => !ids.includes(t.id))
+      bury('transaction', ids)
       onLocalChange()
     },
 

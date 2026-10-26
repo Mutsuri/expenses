@@ -11,6 +11,10 @@ export function formatMoney(satang: number, opts: { sign?: boolean; short?: bool
   return opts.sign && satang > 0 ? `+${text}` : text
 }
 
+const moneyCompact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+/** ป้ายสั้นบนกราฟ: 2255000 สตางค์ → '22.6K' */
+export const formatMoneyCompact = (satang: number) => moneyCompact.format(satang / 100)
+
 /** '1,234.50' → 123450 สตางค์ หรือ null ถ้าไม่ใช่ตัวเลข */
 export function parseMoney(text: string): number | null {
   const clean = text.replace(/[,\s฿]/g, '')

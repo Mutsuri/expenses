@@ -3,7 +3,7 @@ import { formatCycleLong, formatCycleShort, formatMoney, formatMoneyCompact } fr
 import type { CycleRow } from '#shared/utils/history'
 
 const props = defineProps<{ rows: CycleRow[]; selected: string }>()
-const emit = defineEmits<{ select: [key: string]; open: [key: string] }>()
+const emit = defineEmits<{ select: [key: string] }>()
 
 // เก่าสุดอยู่ซ้าย สูงสุด 12 รอบ
 const data = computed(() => props.rows.slice(0, 12).reverse())
@@ -89,10 +89,7 @@ function bar(x: number, v: number) {
 
     <!-- รายละเอียดของรอบที่ดูอยู่ -->
     <div v-if="active" class="mt-3 border-t border-line pt-3">
-      <div class="mb-2 flex items-baseline justify-between gap-2">
-        <b>รอบ{{ formatCycleLong(active.cycle.key) }}</b>
-        <button class="text-[13px] font-semibold text-accent" type="button" @click="emit('open', active.cycle.key)">ดูรายการ ›</button>
-      </div>
+      <b class="mb-2 block">รอบ{{ formatCycleLong(active.cycle.key) }}</b>
       <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm min-[420px]:grid-cols-4">
         <div>
           <dt class="text-xs text-muted">รายรับ</dt>

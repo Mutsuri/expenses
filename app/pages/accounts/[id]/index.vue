@@ -107,7 +107,7 @@ function pickCycle(key: string) {
 
         <template v-else>
           <div class="section-title"><span>รายรับ–รายจ่าย 12 รอบล่าสุด</span><span>แตะแท่งเพื่อดูรายละเอียด</span></div>
-          <CycleChart :rows="history" :selected="cycleKey" @select="cycleKey = $event" @open="pickCycle" />
+          <CycleChart :rows="history" :selected="cycleKey" @select="cycleKey = $event" />
         </template>
       </div>
 

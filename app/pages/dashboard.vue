@@ -5,7 +5,7 @@ import { bankById } from '#shared/utils/banks'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatMoney } from '#shared/utils/format'
 import type { TxType } from '#shared/utils/categories'
-import { groupCategoryOf, inCycle, inOverview, overview } from '#shared/utils/stats'
+import { groupCategoryOf, inCycle, inOverview, isCredit, overview } from '#shared/utils/stats'
 
 const { state, cycleSettings } = useStore()
 
@@ -47,7 +47,7 @@ function itemsFor(type: TxType, category: string) {
               <div class="text-xl font-bold tabular-nums text-expense">{{ formatMoney(data.total.expense) }}</div>
             </div>
           </div>
-          <p class="mt-2 text-xs text-muted">ไม่รวมบัญชีรับเงินเดือนและเงินสด (เงินที่โอนมาจากบัญชีรับเงินเดือนนับเป็นรายรับ) และไม่นับเงินที่โอนกันเองระหว่างบัญชีอื่น</p>
+          <p class="mt-2 text-xs text-muted">ไม่รวมบัญชีรับเงินเดือนและเงินสด (เงินที่โอนมาจากบัญชีรับเงินเดือนนับเป็นรายรับ) และไม่นับเงินที่โอนกันเองระหว่างบัญชีอื่น บัตรเครดิตนับในรายจ่าย แต่ไม่นับในยอดเงินรวม</p>
         </section>
       </div>
 
@@ -59,12 +59,17 @@ function itemsFor(type: TxType, category: string) {
             <BankLogo :bank-id="r.account.bankId" />
             <div class="min-w-0 flex-1">
               <div class="truncate font-semibold">{{ r.account.name || bankById(r.account.bankId).name }}</div>
-              <div class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
+              <div v-if="!isCredit(r.account)" class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
                 <span class="text-income">รับ {{ formatMoney(r.summary.income) }}</span>
                 <span class="text-expense">จ่าย {{ formatMoney(r.summary.expense) }}</span>
               </div>
             </div>
-            <div class="text-right">
+            <!-- บัตรเครดิตแสดงยอดใช้ไปของรอบแทนยอดคงเหลือ (ไม่นับในยอดเงินรวม) -->
+            <div v-if="isCredit(r.account)" class="text-right">
+              <div class="text-[11px] text-muted">ใช้ไปรอบนี้</div>
+              <div class="text-[17px] font-bold tabular-nums text-expense">{{ formatMoney(r.summary.expense) }}</div>
+            </div>
+            <div v-else class="text-right">
               <div class="text-[11px] text-muted">คงเหลือ</div>
               <div class="text-[17px] font-bold tabular-nums">{{ formatMoney(r.summary.closing) }}</div>
             </div>

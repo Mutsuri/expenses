@@ -3,7 +3,7 @@ export interface Bank {
   id: string
   name: string
   color: string
-  /** ไม่มีไฟล์โลโก้ (เงินสด/อื่น ๆ) จะแสดงเป็นไอคอนแทน */
+  /** ไม่มีไฟล์โลโก้ (บัตรเครดิต/เงินสด/อื่น ๆ) จะแสดงเป็นไอคอนแทน */
   logo: boolean
 }
 
@@ -26,6 +26,7 @@ export const BANKS: Bank[] = [
   { id: 'ibank', name: 'อิสลามแห่งประเทศไทย', color: '#184615', logo: true },
   { id: 'tcrb', name: 'ไทยเครดิต', color: '#0a4ab3', logo: true },
   { id: 'sc', name: 'สแตนดาร์ดชาร์เตอร์ด', color: '#0f6ea1', logo: true },
+  { id: 'credit', name: 'บัตรเครดิต', color: '#b45309', logo: false },
   { id: 'cash', name: 'เงินสด', color: '#3d8b5f', logo: false },
   { id: 'other', name: 'อื่น ๆ', color: '#64748b', logo: false },
 ]

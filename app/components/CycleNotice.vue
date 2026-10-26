@@ -5,6 +5,7 @@ import { bankById } from '#shared/utils/banks'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleLong, formatCycleShort, formatMoney } from '#shared/utils/format'
 import { accountCycles } from '#shared/utils/history'
+import { isCredit } from '#shared/utils/stats'
 
 const KEY = 'expenses.seenCycle'
 const { state, cycleSettings } = useStore()
@@ -31,6 +32,8 @@ if (!seen.value) markSeen()
 
 const carried = computed(() =>
   state.accounts
+    // บัตรเครดิตไม่มียอดยกมา
+    .filter((a) => !isCredit(a))
     .map((a) => {
       const row = accountCycles(a, state.transactions, cycleSettings.value, today).find((r) => r.cycle.key === current.value.key)
       return { id: a.id, name: a.name || bankById(a.bankId).name, amount: row?.carriedIn ?? 0 }

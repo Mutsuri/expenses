@@ -3,7 +3,7 @@ import { bankById } from '#shared/utils/banks'
 import { accountCycles, type CycleRow } from '#shared/utils/history'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleShort, formatMoney } from '#shared/utils/format'
-import { balanceOf, inCycle, involves, summarize } from '#shared/utils/stats'
+import { balanceOf, inCycle, involves, isCredit, summarize } from '#shared/utils/stats'
 
 const { state, cycleSettings } = useStore()
 const route = useRoute()
@@ -18,6 +18,9 @@ const cycleKey = ref(cycleOf(todayISO(), cycleSettings.value).key)
 const cycle = computed(() => shiftCycle(cycleKey.value, 0, cycleSettings.value))
 
 const balance = computed(() => (account.value ? balanceOf(account.value, txs.value) : 0))
+// บัตรเครดิต: แสดงยอดใช้ไปของรอบนี้แทนยอดคงเหลือ
+const credit = computed(() => !!account.value && isCredit(account.value))
+const spentNow = computed(() => summarize(inCycle(txs.value, cycleOf(todayISO(), cycleSettings.value)), 0, id).expense)
 const cycleTxs = computed(() => inCycle(txs.value, cycle.value))
 const breakdownType = ref<'expense' | 'income'>('expense')
 
@@ -66,7 +69,11 @@ function pickCycle(key: string) {
           <BankLogo :bank-id="account.bankId" :size="52" />
           <div>
             <div class="text-[13px] text-muted">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
-            <div class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(balance) }}</div>
+            <template v-if="credit">
+              <div class="text-[28px] leading-[1.2] font-bold tabular-nums text-expense">฿{{ formatMoney(spentNow) }}</div>
+              <div class="mt-0.5 text-xs text-muted">ใช้ไปรอบนี้</div>
+            </template>
+            <div v-else class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(balance) }}</div>
             <div v-if="account.salary" class="mt-0.5 text-xs font-semibold text-accent">💼 บัญชีรับเงินเดือน</div>
           </div>
         </section>

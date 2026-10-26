@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { BANKS, bankById } from '#shared/utils/banks'
 import { formatMoney, parseMoney } from '#shared/utils/format'
-import type { Account } from '#shared/utils/stats'
+import { isCredit, type Account } from '#shared/utils/stats'
 
 const props = defineProps<{ initial?: Account }>()
 const emit = defineEmits<{ save: [value: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>] }>()
@@ -15,17 +15,19 @@ const { state, hasSalary } = useStore()
 const salary = ref(props.initial?.salary ?? (hasSalary.value && !state.accounts.some((a) => a.salary)))
 const currentSalary = computed(() => state.accounts.find((a) => a.salary && a.id !== props.initial?.id))
 const error = ref('')
+// บัตรเครดิตไม่มียอดเงินตั้งต้น และเป็นบัญชีรับเงินเดือนไม่ได้
+const credit = computed(() => isCredit({ bankId: bankId.value }))
 
 function submit() {
   if (!bankId.value) return (error.value = 'เลือกธนาคารก่อน')
-  const amount = opening.value.trim() === '' ? 0 : parseMoney(opening.value)
+  const amount = credit.value || opening.value.trim() === '' ? 0 : parseMoney(opening.value)
   if (amount === null) return (error.value = 'ยอดเงินไม่ถูกต้อง')
   emit('save', {
     bankId: bankId.value,
     name: name.value.trim() || bankById(bankId.value).name,
     last4: last4.value.replace(/\D/g, '').slice(-4),
     openingBalance: amount,
-    salary: salary.value,
+    salary: salary.value && !credit.value,
   })
 }
 </script>
@@ -51,19 +53,20 @@ function submit() {
     <div class="card">
       <label class="field">
         <span>ชื่อบัญชี</span>
-        <input v-model="name" class="input" :placeholder="hasSalary ? (bankId ? `เช่น ${bankById(bankId).name} เงินเดือน` : 'เช่น บัญชีเงินเดือน') : 'เช่น บัญชีออมทรัพย์'">
+        <input v-model="name" class="input" :placeholder="credit ? 'เช่น บัตร KTC' : hasSalary ? (bankId ? `เช่น ${bankById(bankId).name} เงินเดือน` : 'เช่น บัญชีเงินเดือน') : 'เช่น บัญชีออมทรัพย์'">
       </label>
       <label class="field">
         <span>เลขบัญชี 4 ตัวท้าย (ไม่บังคับ)</span>
         <input v-model="last4" class="input" inputmode="numeric" maxlength="4" placeholder="1234">
       </label>
-      <label class="field mb-0">
+      <p v-if="credit" class="mx-1 text-[13px] text-muted">💳 บัตรเครดิตจดได้แค่รายจ่าย และแสดงยอดใช้ไปของแต่ละรอบแทนยอดคงเหลือ</p>
+      <label v-else class="field mb-0">
         <span>ยอดเงินในบัญชีตอนนี้ (บาท)</span>
         <input v-model="opening" class="input tabular-nums" inputmode="decimal" placeholder="0.00">
       </label>
     </div>
 
-    <label v-if="hasSalary" class="card mt-2.5 flex cursor-pointer items-start gap-3">
+    <label v-if="hasSalary && !credit" class="card mt-2.5 flex cursor-pointer items-start gap-3">
       <input v-model="salary" type="checkbox" class="mt-0.5 size-[22px] flex-none accent-accent">
       <div>
         <b>💼 บัญชีรับเงินเดือน</b>

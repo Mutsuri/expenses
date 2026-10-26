@@ -3,7 +3,7 @@ import { bankById } from '#shared/utils/banks'
 import { CATEGORIES } from '#shared/utils/categories'
 import { todayISO } from '#shared/utils/cycle'
 import { formatMoney, parseMoney } from '#shared/utils/format'
-import type { Transaction, TxKind } from '#shared/utils/stats'
+import { isCredit, type Transaction, type TxKind } from '#shared/utils/stats'
 
 const props = defineProps<{ initial?: Transaction; accountId?: string; type?: TxKind }>()
 const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>] }>()
@@ -27,20 +27,26 @@ const date = ref(props.initial?.date ?? todayISO())
 const note = ref(props.initial?.note ?? '')
 const error = ref('')
 
-// แท็บประเภทรายการ (โอนได้เมื่อมีมากกว่าหนึ่งบัญชี)
+// บัตรเครดิตจดได้แค่รายจ่าย: ไม่มีให้เลือกตอนจดรายรับหรือโอน
+const cashAccounts = computed(() => state.accounts.filter((a) => !isCredit(a)))
+const accountOptions = computed(() => (type.value === 'expense' ? state.accounts : cashAccounts.value))
+const onCredit = computed(() => isCredit(state.accounts.find((a) => a.id === accountId.value) ?? { bankId: '' }))
+
+// แท็บประเภทรายการ (โอนได้เมื่อมีมากกว่าหนึ่งบัญชีที่ไม่ใช่บัตรเครดิต, บัตรเครดิตมีแค่รายจ่าย)
 const tabs = computed(() =>
   [
     { type: 'expense' as const, label: 'รายจ่าย', color: 'text-expense' },
     { type: 'income' as const, label: 'รายรับ', color: 'text-income' },
     { type: 'transfer' as const, label: 'โอน', color: 'text-accent' },
-  ].filter((t) => t.type !== 'transfer' || state.accounts.length > 1),
+  ].filter((t) => t.type === 'expense' || (!onCredit.value && (t.type !== 'transfer' || cashAccounts.value.length > 1))),
 )
 
 const label = (a: { name: string; bankId: string; salary?: boolean }) => `${a.name} (${bankById(a.bankId).name})${a.salary ? ' 💼' : ''}`
-const targets = computed(() => state.accounts.filter((a) => a.id !== accountId.value))
+const targets = computed(() => cashAccounts.value.filter((a) => a.id !== accountId.value))
 
 watch(type, (t) => {
   error.value = ''
+  if (t !== 'expense' && onCredit.value) accountId.value = cashAccounts.value[0]?.id ?? ''
   if (t !== 'transfer' && !categories.value[t].some((c) => c.id === category.value)) category.value = categories.value[t][0]!.id
 })
 // ปลายทางต้องไม่ใช่บัญชีเดียวกับต้นทาง
@@ -121,7 +127,7 @@ function submit() {
       <label class="field">
         <span>{{ type === 'transfer' ? 'จากบัญชี' : 'บัญชี' }}</span>
         <select v-model="accountId" class="input">
-          <option v-for="a in state.accounts" :key="a.id" :value="a.id">{{ label(a) }}</option>
+          <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ label(a) }}</option>
         </select>
       </label>
       <label v-if="type === 'transfer'" class="field">

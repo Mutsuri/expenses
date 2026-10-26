@@ -14,6 +14,6 @@ const base = useRuntimeConfig().app.baseURL
   >
     <!-- สัญลักษณ์ในไฟล์เต็มกรอบ ย่อให้มีขอบเหมือนภาพตัวอย่างของ omise/banks-logo -->
     <img v-if="bank.logo" class="block size-[78%]" :src="`${base}banks/${bank.id}.svg`" :alt="bank.name">
-    <template v-else>{{ bank.id === 'cash' ? '💵' : '👛' }}</template>
+    <template v-else>{{ ({ credit: '💳', cash: '💵' } as Record<string, string>)[bank.id] ?? '👛' }}</template>
   </span>
 </template>

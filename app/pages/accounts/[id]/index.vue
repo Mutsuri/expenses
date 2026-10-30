@@ -18,6 +18,8 @@ const cycleKey = ref(cycleOf(todayISO(), cycleSettings.value).key)
 const cycle = computed(() => shiftCycle(cycleKey.value, 0, cycleSettings.value))
 
 const balance = computed(() => (account.value ? balanceOf(account.value, txs.value) : 0))
+// บัญชีรับเงินเดือนซ่อนยอดเงินได้ (ปุ่มตา ใช้ค่าเดียวกับหน้าแรก)
+const { hidden: salaryHidden } = useHideSalary()
 // บัตรเครดิต: แสดงยอดใช้ไปของรอบนี้แทนยอดคงเหลือ
 const credit = computed(() => !!account.value && isCredit(account.value))
 const spentNow = computed(() => summarize(inCycle(txs.value, cycleOf(todayISO(), cycleSettings.value)), 0, id).expense)
@@ -78,7 +80,10 @@ function pickCycle(key: string) {
               <div class="text-[28px] leading-[1.2] font-bold tabular-nums text-expense">฿{{ formatMoney(spentNow) }}</div>
               <div class="mt-0.5 text-xs text-muted">ใช้ไปรอบนี้</div>
             </template>
-            <div v-else class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(balance) }}</div>
+            <div v-else class="flex items-center gap-1">
+              <span class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ account.salary && salaryHidden ? MASK : formatMoney(balance) }}</span>
+              <EyeToggle v-if="account.salary" />
+            </div>
             <div v-if="account.salary" class="mt-0.5 text-xs font-semibold text-accent">💼 บัญชีรับเงินเดือน</div>
           </div>
           <NuxtLink :to="`/accounts/${id}/edit`" class="-mr-1 self-start p-1 text-sm font-semibold text-accent">แก้ไข</NuxtLink>

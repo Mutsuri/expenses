@@ -25,6 +25,10 @@ const accounts = computed(() =>
       return { ...a, credit: isCredit(a), balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
     }),
 )
+// บัญชีรับเงินเดือนซ่อนจำนวนเงินได้ (ปุ่มตา)
+const { hidden: salaryHidden } = useHideSalary()
+const money = (a: { salary?: boolean }, v: number) => (a.salary && salaryHidden.value ? MASK : formatMoney(v))
+
 // ภาพรวมรอบนี้ ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต (เหมือนหน้าภาพรวม)
 const others = computed(() => accounts.value.filter(inOverview))
 const total = computed(() =>
@@ -97,8 +101,8 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
                 </span>
               </div>
               <div v-if="!a.credit" class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
-                <span class="text-income">รับ {{ formatMoney(a.cycle.income) }}</span>
-                <span class="text-expense">จ่าย {{ formatMoney(a.cycle.expense) }}</span>
+                <span class="text-income">รับ {{ money(a, a.cycle.income) }}</span>
+                <span class="text-expense">จ่าย {{ money(a, a.cycle.expense) }}</span>
               </div>
             </div>
             <!-- บัตรเครดิตแสดงยอดใช้ไปของรอบนี้แทนยอดคงเหลือ -->
@@ -106,7 +110,8 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
               <div class="text-[11px] text-muted">ใช้ไปรอบนี้</div>
               <div class="text-[17px] font-bold tabular-nums text-expense">{{ formatMoney(a.cycle.expense) }}</div>
             </div>
-            <div v-else class="text-right text-[17px] font-bold tabular-nums">{{ formatMoney(a.balance) }}</div>
+            <EyeToggle v-if="a.salary" class="-mr-1" />
+            <div v-if="!a.credit" class="text-right text-[17px] font-bold tabular-nums">{{ money(a, a.balance) }}</div>
           </NuxtLink>
         </div>
         <NuxtLink v-else to="/accounts/new" class="card block px-4 py-7 text-center">

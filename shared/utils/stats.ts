@@ -1,4 +1,4 @@
-import { TRANSFER_IN, TRANSFER_OUT, type TxType } from './categories'
+import { CARD_PAY, TRANSFER_IN, TRANSFER_OUT, type TxType } from './categories'
 import type { Cycle } from './cycle'
 
 export interface Account {
@@ -44,8 +44,13 @@ export interface CycleSummary {
   net: number
   /** ยอดคงเหลือ ณ วันสุดท้ายของรอบ */
   closing: number
+  /** ชำระบัตรเครดิต (ไม่อยู่ในรายรับ/รายจ่าย): ติดลบ = จ่ายออกจากบัญชีนี้, บวก = บัตรนี้ได้รับชำระ */
+  cardPay: number
   byCategory: { type: TxType; category: string; amount: number }[]
 }
+
+/** โอนไปจ่ายบัตรเครดิต */
+export const isCardPay = (t: Pick<Transaction, 'type' | 'category'>) => t.type === 'transfer' && t.category === CARD_PAY
 
 /** รายการนี้เกี่ยวกับบัญชีนี้ไหม (รวมเป็นปลายทางการโอน) */
 export const involves = (t: Transaction, accountId: string) => t.accountId === accountId || t.toAccountId === accountId
@@ -86,6 +91,7 @@ export function summarize(
 ): CycleSummary {
   let income = 0
   let expense = 0
+  let cardPay = 0
   const cats = new Map<string, { type: TxType; category: string; amount: number }>()
   const addCat = (type: TxType, category: string, amount: number) => {
     const key = `${type}:${category}`
@@ -96,6 +102,10 @@ export function summarize(
   for (const t of txs) {
     if (t.type === 'transfer') {
       if (!accountId) continue
+      if (isCardPay(t)) {
+        cardPay += signedFor(t, accountId)
+        continue
+      }
       if (t.accountId === accountId) {
         expense += t.amount
         addCat('expense', TRANSFER_OUT, t.amount)
@@ -111,7 +121,7 @@ export function summarize(
     addCat(t.type, t.category, t.amount)
   }
   const byCategory = [...cats.values()].sort((a, b) => b.amount - a.amount)
-  return { income, expense, net: income - expense, closing, byCategory }
+  return { income, expense, net: income - expense, closing, byCategory, cardPay }
 }
 
 /** จัดกลุ่มรายการตามวัน ใหม่สุดก่อน ยอดสุทธิคิดจากมุมของบัญชี accountId */
@@ -136,6 +146,9 @@ export interface AccountOverview {
 /** บัตรเครดิต: จดได้แค่รายจ่าย แสดงยอดใช้ไปของรอบแทนยอดคงเหลือ */
 export const isCredit = (a: Pick<Account, 'bankId'>) => a.bankId === 'credit'
 
+/** ยอดค้างชำระของบัตรเครดิต ณ วันที่ upTo (รูดไป − CashBack − ชำระแล้ว สะสมทุกรอบ), ติดลบ = จ่ายเกิน */
+export const cardDebt = (card: Account, txs: Transaction[], upTo: string) => -balanceOf(card, txs, upTo)
+
 /** บัญชีที่นับในภาพรวม: ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต */
 export const inOverview = (a: Account) => !a.salary && a.bankId !== 'cash' && !isCredit(a)
 
@@ -148,6 +161,7 @@ export function groupCategoryOf(
   ids: ReadonlySet<string>,
   salaryIds: ReadonlySet<string> = new Set(),
 ): { type: TxType; category: string } | null {
+  if (isCardPay(t)) return null
   const fromIn = ids.has(t.accountId)
   if (t.type !== 'transfer') return fromIn ? { type: t.type, category: t.category } : null
   const toIn = !!t.toAccountId && ids.has(t.toAccountId)
@@ -177,7 +191,7 @@ export function summarizeGroup(
     cats.set(key, row)
   }
   const byCategory = [...cats.values()].sort((a, b) => b.amount - a.amount)
-  return { income, expense, net: income - expense, closing, byCategory }
+  return { income, expense, net: income - expense, closing, byCategory, cardPay: 0 }
 }
 
 /**

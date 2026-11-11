@@ -3,7 +3,7 @@ import { bankById } from '#shared/utils/banks'
 import { accountCycles, type CycleRow } from '#shared/utils/history'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatCycleShort, formatMoney } from '#shared/utils/format'
-import { balanceOf, inCycle, involves, isCredit, signedFor, summarize, type Transaction } from '#shared/utils/stats'
+import { balanceOf, cardDebt, inCycle, involves, isCredit, signedFor, summarize, type Transaction } from '#shared/utils/stats'
 
 const { state, cycleSettings } = useStore()
 const route = useRoute()
@@ -24,6 +24,8 @@ const { hidden: salaryHidden } = useHideSalary()
 const credit = computed(() => !!account.value && isCredit(account.value))
 const nowSummary = computed(() => summarize(inCycle(txs.value, cycleOf(todayISO(), cycleSettings.value)), 0, id))
 const spentNow = computed(() => nowSummary.value.expense)
+// ยอดค้างชำระสะสม (ไม่นับงวดผ่อนที่ยังไม่ถึง)
+const debt = computed(() => (account.value && credit.value ? cardDebt(account.value, txs.value, todayISO()) : 0))
 const cycleTxs = computed(() => inCycle(txs.value, cycle.value))
 const breakdownType = ref<'expense' | 'income'>('expense')
 
@@ -82,6 +84,10 @@ function pickCycle(key: string) {
               <div class="mt-0.5 text-xs text-muted">
                 ใช้ไปรอบนี้<template v-if="nowSummary.income"> · <span class="text-income">💸 CashBack +{{ formatMoney(nowSummary.income) }}</span></template>
               </div>
+              <div class="mt-0.5 text-xs text-muted">
+                <template v-if="debt >= 0">ค้างชำระ <b class="tabular-nums text-expense">฿{{ formatMoney(debt) }}</b></template>
+                <template v-else>จ่ายเกิน <b class="tabular-nums text-income">฿{{ formatMoney(-debt) }}</b></template>
+              </div>
             </template>
             <div v-else class="flex items-center gap-1">
               <span class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ account.salary && salaryHidden ? MASK : formatMoney(balance) }}</span>
@@ -91,6 +97,7 @@ function pickCycle(key: string) {
           </div>
           <NuxtLink :to="`/accounts/${id}/edit`" class="-mr-1 self-start p-1 text-sm font-semibold text-accent">แก้ไข</NuxtLink>
         </section>
+        <NuxtLink v-if="credit" :to="`/tx/new?type=transfer&to=${id}`" class="btn btn-block mt-2.5">💳 ชำระบัตร</NuxtLink>
 
         <div class="mt-4 mb-3 grid grid-cols-2 rounded-[14px] bg-card-2 p-1">
           <button

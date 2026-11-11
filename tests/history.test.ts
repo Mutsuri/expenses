@@ -39,3 +39,13 @@ describe('accountCycles', () => {
     expect(oct!.summary.closing).toBe(balanceOf(acc, txs))
   })
 })
+
+describe('card payment carries over', () => {
+  it('reduces the closing balance without counting as expense', () => {
+    const acc: Account = { id: 'p', bankId: 'kbank', name: '', last4: '', openingBalance: 1_000_00, createdAt: Date.UTC(2026, 9, 1), updatedAt: 0 }
+    const pay: Transaction = { id: 'x', accountId: 'p', toAccountId: 'c', type: 'transfer', category: 'card-pay', amount: 400_00, date: '2026-10-05', note: '', createdAt: 0, updatedAt: 0 }
+    const [row] = accountCycles(acc, [pay], { paydayDay: 1, holidays: [], calendar: true }, '2026-10-10')
+    expect(row!.summary.expense).toBe(0)
+    expect(row!.summary.closing).toBe(600_00)
+  })
+})

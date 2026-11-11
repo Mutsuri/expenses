@@ -16,5 +16,10 @@ defineProps<{ row: CycleRow; credit?: boolean }>()
       <div class="text-[13px] text-muted">{{ credit ? 'ใช้ไป' : 'รายจ่าย' }}</div>
       <div class="text-xl font-bold tabular-nums text-expense">{{ formatMoney(row.summary.expense) }}</div>
     </div>
+    <!-- ชำระบัตรเครดิตไม่อยู่ในรายรับ/รายจ่าย แยกไว้บรรทัดล่าง -->
+    <div v-if="row.summary.cardPay" class="col-span-2 flex justify-between px-1 text-sm">
+      <span class="text-muted">💳 {{ credit ? 'ชำระบัตรแล้ว' : 'จ่ายบัตรเครดิต' }}</span>
+      <b class="tabular-nums">{{ formatMoney(Math.abs(row.summary.cardPay)) }}</b>
+    </div>
   </div>
 </template>

@@ -2,7 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { categoryById } from '#shared/utils/categories'
 import { formatMoney, formatWeekday } from '#shared/utils/format'
-import { groupByDay, signedFor, type Transaction } from '#shared/utils/stats'
+import { groupByDay, isCardPay, signedFor, type Transaction } from '#shared/utils/stats'
 
 // accountId = บัญชีที่กำลังดู ใช้บอกว่าการโอนเป็นเข้าหรือออก, filtered = มีตัวกรองอยู่ (ข้อความตอนไม่มีรายการ)
 const props = defineProps<{ items: Transaction[]; accountId: string; filtered?: boolean }>()
@@ -19,6 +19,10 @@ function view(t: Transaction): { icon: string; title: string; sub: string; peer?
   if (t.type === 'transfer') {
     const out = t.accountId === props.accountId
     const peer = accountName(out ? t.toAccountId : t.accountId)
+    // ชำระบัตรเครดิต: ไม่ใช่รายรับ/รายจ่าย (สีกลาง)
+    if (isCardPay(t)) {
+      return { icon: '💳', title: t.note || (out ? `ชำระบัตร ${peer}` : `รับชำระจาก ${peer}`), sub: out ? 'ชำระบัตร ·' : 'รับชำระ · จาก', peer, color: '' }
+    }
     // รับโอนจากบัญชีรับเงินเดือน = เงินเดือน
     if (!out && state.accounts.find((a) => a.id === t.accountId)?.salary) {
       return { icon: '💼', title: t.note || 'เงินเดือน', sub: 'เงินเดือน · จาก', peer, color: 'text-income' }

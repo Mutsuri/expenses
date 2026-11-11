@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { CASHBACK, CATEGORIES } from '#shared/utils/categories'
+import { CARD_PAY, CASHBACK, CATEGORIES } from '#shared/utils/categories'
 import { todayISO } from '#shared/utils/cycle'
 import { formatMoney, parseMoney } from '#shared/utils/format'
 import { isCredit, type Transaction, type TxKind } from '#shared/utils/stats'
 
-const props = defineProps<{ initial?: Transaction; accountId?: string; type?: TxKind }>()
+// toAccountId: ปลายทางการโอนเริ่มต้น (เช่น กดชำระบัตรจากหน้าบัตรเครดิต)
+const props = defineProps<{ initial?: Transaction; accountId?: string; type?: TxKind; toAccountId?: string }>()
 // months: จดเป็นรายการผ่อน (เฉพาะรายจ่ายใหม่บนบัตรเครดิต)
 const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>, months?: number] }>()
 const { state, hasSalary } = useStore()
@@ -22,28 +23,29 @@ const amount = ref(props.initial ? formatMoney(props.initial.amount).replace(/,/
 const category = ref(props.initial?.category ?? CATEGORIES.expense[0]!.id)
 // โอน: เริ่มจากบัญชีรับเงินเดือน
 const accountId = ref(
-  props.initial?.accountId ?? props.accountId ?? (type.value === 'transfer' ? salaryId : undefined) ?? state.accounts[0]?.id ?? '',
+  props.initial?.accountId ?? props.accountId ?? (type.value === 'transfer' ? (salaryId ?? state.accounts.find((a) => !isCredit(a))?.id) : undefined) ?? state.accounts[0]?.id ?? '',
 )
-const toAccountId = ref(props.initial?.toAccountId ?? '')
+const toAccountId = ref(props.initial?.toAccountId ?? props.toAccountId ?? '')
 const date = ref(props.initial?.date ?? todayISO())
 const note = ref(props.initial?.note ?? '')
 const error = ref('')
 
-// บัตรเครดิตจดได้แค่รายจ่ายกับ CashBack: ไม่มีให้เลือกตอนโอน
+// บัตรเครดิตจดได้แค่รายจ่ายกับ CashBack: โอนออกไม่ได้ แต่เป็นปลายทางได้ (ชำระบัตร)
 const cashAccounts = computed(() => state.accounts.filter((a) => !isCredit(a)))
 const accountOptions = computed(() => (type.value === 'transfer' ? cashAccounts.value : state.accounts))
 const onCredit = computed(() => isCredit(state.accounts.find((a) => a.id === accountId.value) ?? { bankId: '' }))
 
-// แท็บประเภทรายการ (โอนได้เมื่อมีมากกว่าหนึ่งบัญชีที่ไม่ใช่บัตรเครดิต, บัตรเครดิตมีรายจ่ายกับ CashBack)
+// แท็บประเภทรายการ (โอนได้เมื่อมีบัญชีปลายทาง, บัตรเครดิตมีรายจ่ายกับ CashBack)
 const tabs = computed(() =>
   [
     { type: 'expense' as const, label: 'รายจ่าย', color: 'text-expense' },
     { type: 'income' as const, label: onCredit.value ? 'CashBack' : 'รายรับ', color: 'text-income' },
     { type: 'transfer' as const, label: 'โอน', color: 'text-accent' },
-  ].filter((t) => t.type !== 'transfer' || (!onCredit.value && cashAccounts.value.length > 1)),
+  ].filter((t) => t.type !== 'transfer' || (!onCredit.value && cashAccounts.value.length > 0 && state.accounts.length > 1)),
 )
 
-const targets = computed(() => cashAccounts.value.filter((a) => a.id !== accountId.value))
+const targets = computed(() => state.accounts.filter((a) => a.id !== accountId.value))
+const toCredit = computed(() => isCredit(state.accounts.find((a) => a.id === toAccountId.value) ?? { bankId: '' }))
 
 // ผ่อน: เฉพาะตอนจดรายจ่ายใหม่บนบัตรเครดิต (งวดที่สร้างแล้วแก้ทีละงวด)
 const installment = ref(false)
@@ -83,7 +85,7 @@ function submit() {
   if (type.value === 'transfer') {
     if (!toAccountId.value || toAccountId.value === accountId.value) return (error.value = 'เลือกบัญชีปลายทาง')
     return emit('save', {
-      type: 'transfer', amount: value, category: 'transfer', accountId: accountId.value, toAccountId: toAccountId.value,
+      type: 'transfer', amount: value, category: toCredit.value ? CARD_PAY : 'transfer', accountId: accountId.value, toAccountId: toAccountId.value,
       date: date.value, note: note.value.trim(),
     })
   }
@@ -154,6 +156,7 @@ function submit() {
       <div v-if="type === 'transfer'" class="field">
         <span>ไปบัญชี</span>
         <AccountPicker v-model="toAccountId" :accounts="targets" />
+        <p v-if="toCredit" class="mx-1 mt-1.5 text-[13px] text-muted">💳 ชำระบัตรเครดิต: เงินออกจากบัญชีแต่ไม่นับเป็นรายจ่าย (นับไปแล้วตอนรูดบัตร)</p>
       </div>
       <div v-if="canInstall" class="field">
         <label class="flex cursor-pointer items-center gap-2.5">
@@ -181,11 +184,11 @@ function submit() {
       </div>
       <label class="field mb-0">
         <span>บันทึกช่วยจำ</span>
-        <input v-model="note" class="input" :placeholder="type === 'transfer' ? 'เช่น ค่าใช้จ่ายเดือนนี้' : 'เช่น ข้าวเที่ยง'">
+        <input v-model="note" class="input" :placeholder="type === 'transfer' ? (toCredit ? 'เช่น จ่ายบิลเดือนนี้' : 'เช่น ค่าใช้จ่ายเดือนนี้') : 'เช่น ข้าวเที่ยง'">
       </label>
     </div>
 
     <p v-if="error" class="mt-3 text-center text-expense">{{ error }}</p>
-    <button class="btn btn-primary btn-block mt-[18px]" type="submit">{{ type === 'transfer' ? 'บันทึกการโอน' : 'บันทึก' }}</button>
+    <button class="btn btn-primary btn-block mt-[18px]" type="submit">{{ type === 'transfer' ? (toCredit ? 'บันทึกการชำระบัตร' : 'บันทึกการโอน') : 'บันทึก' }}</button>
   </form>
 </template>

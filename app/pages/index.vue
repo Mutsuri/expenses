@@ -2,7 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
-import { balanceOf, inCycle, inOverview, involves, isCredit, summarize, summarizeGroup } from '#shared/utils/stats'
+import { balanceOf, cardDebt, inCycle, inOverview, involves, isCredit, summarize, summarizeGroup } from '#shared/utils/stats'
 
 const { state, hasSalary, cycleSettings } = useStore()
 const { displayName } = useAuth()
@@ -22,7 +22,8 @@ const accounts = computed(() =>
     .sort((a, b) => Number(!!b.salary) - Number(!!a.salary))
     .map((a) => {
       const txs = state.transactions.filter((t) => involves(t, a.id))
-      return { ...a, credit: isCredit(a), balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
+      const credit = isCredit(a)
+      return { ...a, credit, debt: credit ? cardDebt(a, txs, today) : 0, balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
     }),
 )
 // บัญชีรับเงินเดือนซ่อนจำนวนเงินได้ (ปุ่มตา)
@@ -38,6 +39,7 @@ const totalBalance = computed(() => others.value.reduce((s, a) => s + a.balance,
 // บัตรเครดิตแยกไว้อีกบรรทัด ไม่รวมกับรายจ่ายด้านบน
 const cards = computed(() => accounts.value.filter((a) => a.credit))
 const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expense, 0))
+const cardsDebt = computed(() => cards.value.reduce((s, a) => s + Math.max(0, a.debt), 0))
 </script>
 
 <template>
@@ -76,6 +78,7 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
           <!-- เว้นเหนือและใต้บรรทัดบัตรเท่ากัน (pt-3 กับ pb-3 ของการ์ด) -->
           <div v-if="cards.length" class="mt-3 border-t border-line pt-3 text-sm tabular-nums">
             <span class="text-muted">💳 บัตรเครดิตใช้ไป</span> <b class="text-expense">{{ formatMoney(cardsSpent) }}</b>
+            <template v-if="cardsDebt"><span class="ml-1.5 text-muted">· ค้างชำระ</span> <b>{{ formatMoney(cardsDebt) }}</b></template>
           </div>
         </NuxtLink>
       </div>
@@ -100,6 +103,7 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
                   💼 รับเงินเดือน
                 </span>
               </div>
+              <div v-if="a.credit && a.debt > 0" class="text-[13px] tabular-nums text-muted">ค้างชำระ {{ formatMoney(a.debt) }}</div>
               <div v-if="a.credit && a.cycle.income" class="text-[13px] tabular-nums text-income">💸 CashBack +{{ formatMoney(a.cycle.income) }}</div>
               <div v-if="!a.credit" class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
                 <span class="text-income">รับ {{ money(a, a.cycle.income) }}</span>

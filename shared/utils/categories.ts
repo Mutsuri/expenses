@@ -37,6 +37,8 @@ export const CATEGORIES: Record<TxType, Category[]> = {
 export const CASHBACK = 'cashback'
 export const TRANSFER_IN = 'transfer-in'
 export const TRANSFER_OUT = 'transfer-out'
+/** โอนจากบัญชีไปจ่ายบัตรเครดิต: ไม่นับเป็นรายรับหรือรายจ่าย (นับไปแล้วตอนรูดบัตร) */
+export const CARD_PAY = 'card-pay'
 const TRANSFER_CATEGORIES: Record<string, Category> = {
   [TRANSFER_IN]: { id: TRANSFER_IN, name: 'รับโอน', icon: '🔁' },
   [TRANSFER_OUT]: { id: TRANSFER_OUT, name: 'โอนออก', icon: '🔁' },

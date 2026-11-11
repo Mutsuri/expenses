@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseMoney, formatMoney } from '../shared/utils/format'
-import { balanceOf, groupByDay, groupCategoryOf, inOverview, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
+import { balanceOf, cardDebt, groupByDay, groupCategoryOf, inOverview, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
 
 const acc: Account = { id: 'a', bankId: 'kbank', name: 'หลัก', last4: '', openingBalance: 100_00, createdAt: 0, updatedAt: 0 }
 const tx = (p: Partial<Transaction>): Transaction => ({
@@ -156,5 +156,34 @@ describe('groupCategoryOf', () => {
 describe('บัตรเครดิตในภาพรวม', () => {
   it('ไม่นับบัตรเครดิต', () => {
     expect(inOverview({ ...acc, bankId: 'credit' })).toBe(false)
+  })
+})
+
+describe('credit card payment', () => {
+  const bank: Account = { ...acc, id: 'p', openingBalance: 10_000_00 }
+  const card: Account = { ...acc, id: 'c', bankId: 'credit', openingBalance: 0 }
+  const txs = [
+    tx({ id: '1', accountId: 'c', amount: 3_000_00, category: 'online-shop', date: '2026-10-01' }),
+    tx({ id: '2', accountId: 'c', type: 'income', amount: 150_00, category: 'cashback', date: '2026-10-02' }),
+    tx({ id: '3', accountId: 'p', toAccountId: 'c', type: 'transfer', category: 'card-pay', amount: 2_000_00, date: '2026-10-25' }),
+    // งวดผ่อนที่ยังไม่ถึง ไม่นับในยอดค้างชำระ
+    tx({ id: '4', accountId: 'c', amount: 500_00, category: 'mall-shop', date: '2026-12-01' }),
+  ]
+
+  it('is not income or expense on either side, but moves balance', () => {
+    const fromBank = summarize(txs, 0, 'p')
+    expect(fromBank.expense).toBe(0)
+    expect(fromBank.cardPay).toBe(-2_000_00)
+    expect(balanceOf(bank, txs)).toBe(8_000_00)
+    const onCard = summarize(txs.slice(0, 3), 0, 'c')
+    expect(onCard).toMatchObject({ income: 150_00, expense: 3_000_00, cardPay: 2_000_00 })
+  })
+
+  it('is left out of group totals', () => {
+    expect(groupCategoryOf(txs[2]!, new Set(['p']))).toBeNull()
+  })
+
+  it('tracks outstanding debt up to today', () => {
+    expect(cardDebt(card, txs, '2026-11-01')).toBe(850_00)
   })
 })

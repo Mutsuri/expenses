@@ -7,7 +7,7 @@ import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney } from '#shared/utils/format'
 import { categoryById, type TxType } from '#shared/utils/categories'
 import { activePlans } from '#shared/utils/installment'
-import { groupCategoryOf, inCycle, inOverview, isCredit, overview } from '#shared/utils/stats'
+import { cardDebt, groupCategoryOf, inCycle, inOverview, isCredit, overview } from '#shared/utils/stats'
 
 const { state, cycleSettings } = useStore()
 
@@ -36,6 +36,12 @@ const cardItems = (id: string) =>
     .filter((t) => t.accountId === id && t.type !== 'transfer')
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1))
 // รายการผ่อนที่ยังมีงวดเหลือ (นับจากวันนี้ ไม่ขึ้นกับรอบที่เลือก)
+// ค้างชำระสะสมถึงวันนี้ (ไม่ขึ้นกับรอบที่เลือก)
+const debtOf = (id: string) => {
+  const card = state.accounts.find((a) => a.id === id)
+  return card ? cardDebt(card, state.transactions, todayISO()) : 0
+}
+const totalDebt = computed(() => creditAccounts.value.reduce((s, a) => s + Math.max(0, debtOf(a.id)), 0))
 const plansOf = (id: string) => activePlans(state.transactions, id, todayISO())
 // รายการในหมวดที่แตะขยาย: นับแบบเดียวกับยอดรวม (groupCategoryOf)
 function itemsFor(type: TxType, category: string) {
@@ -94,6 +100,10 @@ function itemsFor(type: TxType, category: string) {
             <div class="text-[13px] text-muted">CashBack รวม</div>
             <div class="text-xl font-bold tabular-nums text-income">{{ formatMoney(data.total.income) }}</div>
           </div>
+          <div class="col-span-2 flex justify-between px-1 text-sm">
+            <span class="text-muted">ค้างชำระรวม (ถึงวันนี้)</span>
+            <b class="tabular-nums">{{ formatMoney(totalDebt) }}</b>
+          </div>
         </section>
       </div>
 
@@ -133,6 +143,7 @@ function itemsFor(type: TxType, category: string) {
                 <BankLogo :bank-id="r.account.bankId" />
                 <div class="min-w-0 flex-1">
                   <div class="truncate font-semibold">{{ r.account.name || bankById(r.account.bankId).name }}</div>
+                  <div v-if="debtOf(r.account.id) > 0" class="text-[13px] tabular-nums text-muted">ค้างชำระ {{ formatMoney(debtOf(r.account.id)) }}</div>
                   <div v-if="r.summary.income" class="text-[13px] tabular-nums text-income">💸 CashBack +{{ formatMoney(r.summary.income) }}</div>
                 </div>
                 <div class="text-right">

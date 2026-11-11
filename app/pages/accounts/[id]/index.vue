@@ -107,7 +107,7 @@ function pickCycle(key: string) {
         <template v-if="tab === 'list'">
           <CycleNav v-model="cycleKey" />
           <div class="h-2.5" />
-          <SummaryCard :row="row" />
+          <SummaryCard :row="row" :credit="credit" />
 
           <div class="section-title">
             <span>แยกตามหมวด</span>

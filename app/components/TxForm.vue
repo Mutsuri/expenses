@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { bankById } from '#shared/utils/banks'
 import { CASHBACK, CATEGORIES } from '#shared/utils/categories'
 import { todayISO } from '#shared/utils/cycle'
 import { formatMoney, parseMoney } from '#shared/utils/format'
@@ -44,7 +43,6 @@ const tabs = computed(() =>
   ].filter((t) => t.type !== 'transfer' || (!onCredit.value && cashAccounts.value.length > 1)),
 )
 
-const label = (a: { name: string; bankId: string; salary?: boolean }) => `${a.name} (${bankById(a.bankId).name})${a.salary ? ' 💼' : ''}`
 const targets = computed(() => cashAccounts.value.filter((a) => a.id !== accountId.value))
 
 // ผ่อน: เฉพาะตอนจดรายจ่ายใหม่บนบัตรเครดิต (งวดที่สร้างแล้วแก้ทีละงวด)
@@ -149,35 +147,38 @@ function submit() {
 
     <div class="section-title"><span>รายละเอียด</span></div>
     <div class="card">
-      <label class="field">
+      <div class="field">
         <span>{{ type === 'transfer' ? 'จากบัญชี' : 'บัญชี' }}</span>
-        <select v-model="accountId" class="input">
-          <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ label(a) }}</option>
-        </select>
-      </label>
-      <label v-if="type === 'transfer'" class="field">
+        <AccountPicker v-model="accountId" :accounts="accountOptions" />
+      </div>
+      <div v-if="type === 'transfer'" class="field">
         <span>ไปบัญชี</span>
-        <select v-model="toAccountId" class="input">
-          <option v-for="a in targets" :key="a.id" :value="a.id">{{ label(a) }}</option>
-        </select>
-      </label>
+        <AccountPicker v-model="toAccountId" :accounts="targets" />
+      </div>
       <div v-if="canInstall" class="field">
         <label class="flex cursor-pointer items-center gap-2.5">
           <input v-model="installment" type="checkbox" class="size-[22px] flex-none accent-accent">
           <b>ผ่อนชำระ</b>
         </label>
-        <div v-if="installment" class="mt-2 flex items-center gap-2">
-          <select v-model.number="months" class="input w-auto">
-            <option v-for="m in MONTHS" :key="m" :value="m">{{ m }} เดือน</option>
-          </select>
-          <span v-if="perMonth" class="text-sm text-muted">งวดละ ~{{ perMonth }}</span>
+        <div v-if="installment" class="mt-2 flex flex-wrap gap-1.5">
+          <button
+            v-for="m in MONTHS"
+            :key="m"
+            type="button"
+            class="rounded-full border-2 bg-card-2 px-3 py-1 text-sm tabular-nums"
+            :class="months === m ? 'border-accent font-semibold text-accent' : 'border-transparent'"
+            @click="months = m"
+          >
+            {{ m }} เดือน
+          </button>
         </div>
+        <p v-if="installment && perMonth" class="mx-1 mt-1.5 text-sm">งวดละ ~{{ perMonth }}</p>
         <p v-if="installment" class="mx-1 mt-1.5 text-[13px] text-muted">นับเป็นรายจ่ายรอบละงวด งวดแรกวันที่ซื้อ งวดต่อไปวันแรกของรอบถัด ๆ ไป</p>
       </div>
-      <label class="field">
+      <div class="field">
         <span>วันที่</span>
-        <input v-model="date" type="date" class="input" required>
-      </label>
+        <DatePicker v-model="date" />
+      </div>
       <label class="field mb-0">
         <span>บันทึกช่วยจำ</span>
         <input v-model="note" class="input" :placeholder="type === 'transfer' ? 'เช่น ค่าใช้จ่ายเดือนนี้' : 'เช่น ข้าวเที่ยง'">

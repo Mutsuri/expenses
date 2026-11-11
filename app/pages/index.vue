@@ -2,6 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { cycleOf, daysBetween, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney, formatWeekdayYear } from '#shared/utils/format'
+import { cardBill } from '#shared/utils/card'
 import { balanceOf, cardDebt, inCycle, inOverview, involves, isCredit, summarize, summarizeGroup } from '#shared/utils/stats'
 
 const { state, hasSalary, cycleSettings } = useStore()
@@ -23,7 +24,7 @@ const accounts = computed(() =>
     .map((a) => {
       const txs = state.transactions.filter((t) => involves(t, a.id))
       const credit = isCredit(a)
-      return { ...a, credit, debt: credit ? cardDebt(a, txs, today) : 0, balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
+      return { ...a, credit, debt: credit ? cardDebt(a, txs, today) : 0, bill: credit ? cardBill(a, txs, today) : null, balance: balanceOf(a, txs), cycle: summarize(inCycle(txs, cycle.value), 0, a.id, salaryIds.value) }
     }),
 )
 // บัญชีรับเงินเดือนซ่อนจำนวนเงินได้ (ปุ่มตา)
@@ -103,17 +104,17 @@ const cardsDebt = computed(() => cards.value.reduce((s, a) => s + Math.max(0, a.
                   💼 รับเงินเดือน
                 </span>
               </div>
-              <div v-if="a.credit && a.debt > 0" class="text-[13px] tabular-nums text-muted">ค้างชำระ {{ formatMoney(a.debt) }}</div>
+              <div v-if="a.bill?.due" class="text-[13px] tabular-nums text-expense">🧾 บิลรอชำระ {{ formatMoney(a.bill.due) }} · ครบ {{ formatDay(a.bill.dueDate) }}</div>
               <div v-if="a.credit && a.cycle.income" class="text-[13px] tabular-nums text-income">💸 CashBack +{{ formatMoney(a.cycle.income) }}</div>
               <div v-if="!a.credit" class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
                 <span class="text-income">รับ {{ money(a, a.cycle.income) }}</span>
                 <span class="text-expense">จ่าย {{ money(a, a.cycle.expense) }}</span>
               </div>
             </div>
-            <!-- บัตรเครดิตแสดงยอดใช้ไปของรอบนี้แทนยอดคงเหลือ -->
-            <div v-if="a.credit" class="text-right">
-              <div class="text-[11px] text-muted">ใช้ไปรอบนี้</div>
-              <div class="text-[17px] font-bold tabular-nums text-expense">{{ formatMoney(a.cycle.expense) }}</div>
+            <!-- บัตรเครดิตแสดงยอดรอบบิลที่ยังไม่ได้ชำระแทนยอดคงเหลือ (จ่ายแล้วเป็น 0) -->
+            <div v-if="a.bill" class="text-right">
+              <div class="text-[11px] text-muted">ยอดรอบนี้</div>
+              <div class="text-[17px] font-bold tabular-nums" :class="{ 'text-expense': a.bill.current }">{{ formatMoney(a.bill.current) }}</div>
             </div>
             <EyeToggle v-if="a.salary" class="-mr-1" />
             <div v-if="!a.credit" class="text-right text-[17px] font-bold tabular-nums">{{ money(a, a.balance) }}</div>

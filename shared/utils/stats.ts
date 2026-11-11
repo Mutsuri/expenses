@@ -74,7 +74,7 @@ export function balanceOf(account: Account, txs: Transaction[], upTo?: string): 
   return total
 }
 
-export function inCycle(txs: Transaction[], c: Cycle): Transaction[] {
+export function inCycle(txs: Transaction[], c: Pick<Cycle, 'start' | 'end'>): Transaction[] {
   return txs.filter((t) => t.date >= c.start && t.date <= c.end)
 }
 

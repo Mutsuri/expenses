@@ -2,8 +2,9 @@
 import { bankById } from '#shared/utils/banks'
 import { accountCycles, type CycleRow } from '#shared/utils/history'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
-import { formatCycleShort, formatMoney } from '#shared/utils/format'
-import { balanceOf, cardDebt, inCycle, involves, isCredit, signedFor, summarize, type Transaction } from '#shared/utils/stats'
+import { formatCycleShort, formatDay, formatMoney } from '#shared/utils/format'
+import { cardBill } from '#shared/utils/card'
+import { balanceOf, inCycle, involves, isCredit, signedFor, summarize, type Transaction } from '#shared/utils/stats'
 
 const { state, cycleSettings } = useStore()
 const route = useRoute()
@@ -22,10 +23,11 @@ const balance = computed(() => (account.value ? balanceOf(account.value, txs.val
 const { hidden: salaryHidden } = useHideSalary()
 // บัตรเครดิต: แสดงยอดใช้ไปของรอบนี้แทนยอดคงเหลือ
 const credit = computed(() => !!account.value && isCredit(account.value))
-const nowSummary = computed(() => summarize(inCycle(txs.value, cycleOf(todayISO(), cycleSettings.value)), 0, id))
-const spentNow = computed(() => nowSummary.value.expense)
-// ยอดค้างชำระสะสม (ไม่นับงวดผ่อนที่ยังไม่ถึง)
-const debt = computed(() => (account.value && credit.value ? cardDebt(account.value, txs.value, todayISO()) : 0))
+// บัตรเครดิต: บิลที่สรุปแล้ว (ชำระแล้วเป็น 0) และยอดรอบบิลที่กำลังใช้
+const bill = computed(() => (account.value && credit.value ? cardBill(account.value, txs.value, todayISO()) : null))
+const periodSummary = computed(() =>
+  bill.value ? summarize(inCycle(txs.value, { start: bill.value.periodStart, end: todayISO() }), 0, id) : null,
+)
 const cycleTxs = computed(() => inCycle(txs.value, cycle.value))
 const breakdownType = ref<'expense' | 'income'>('expense')
 
@@ -79,14 +81,11 @@ function pickCycle(key: string) {
           <BankLogo :bank-id="account.bankId" :size="52" />
           <div class="min-w-0 flex-1">
             <div class="text-[13px] leading-4 text-muted">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
-            <template v-if="credit">
-              <div class="text-[28px] leading-[1.2] font-bold tabular-nums text-expense">฿{{ formatMoney(spentNow) }}</div>
-              <div class="mt-0.5 text-xs text-muted">
-                ใช้ไปรอบนี้<template v-if="nowSummary.income"> · <span class="text-income">💸 CashBack +{{ formatMoney(nowSummary.income) }}</span></template>
-              </div>
-              <div class="mt-0.5 text-xs text-muted">
-                <template v-if="debt >= 0">ค้างชำระ <b class="tabular-nums text-expense">฿{{ formatMoney(debt) }}</b></template>
-                <template v-else>จ่ายเกิน <b class="tabular-nums text-income">฿{{ formatMoney(-debt) }}</b></template>
+            <template v-if="bill && periodSummary">
+              <div class="text-[28px] leading-[1.2] font-bold tabular-nums" :class="{ 'text-expense': bill.current }">฿{{ formatMoney(bill.current) }}</div>
+              <div class="mt-0.5 text-xs text-muted">ยอดรอบ {{ formatDay(bill.periodStart) }} – {{ formatDay(bill.periodEnd) }} · ชำระภายใน {{ formatDay(bill.nextDueDate) }}</div>
+              <div v-if="periodSummary.expense || periodSummary.income" class="mt-0.5 text-xs text-muted">
+                ใช้ไป {{ formatMoney(periodSummary.expense) }}<template v-if="periodSummary.income"> · <span class="text-income">💸 CashBack +{{ formatMoney(periodSummary.income) }}</span></template>
               </div>
             </template>
             <div v-else class="flex items-center gap-1">
@@ -96,6 +95,18 @@ function pickCycle(key: string) {
             <div v-if="account.salary" class="mt-0.5 text-xs font-semibold text-accent">💼 บัญชีรับเงินเดือน</div>
           </div>
           <NuxtLink :to="`/accounts/${id}/edit`" class="-mr-1 self-start p-1 text-sm font-semibold text-accent">แก้ไข</NuxtLink>
+        </section>
+        <!-- บิลที่สรุปยอดแล้ว: ชำระครบแล้วยอดเป็น 0 -->
+        <section v-if="bill && (bill.billed || bill.due)" class="card mt-2.5 flex items-center justify-between gap-3" :class="{ 'border-2 border-expense': bill.due }">
+          <div class="min-w-0">
+            <div class="font-semibold">🧾 บิลสรุปยอด {{ formatDay(bill.statement) }}</div>
+            <div class="text-xs text-muted">ครบกำหนดชำระ {{ formatDay(bill.dueDate) }}</div>
+          </div>
+          <div v-if="bill.due" class="text-right">
+            <div class="text-[11px] text-muted">ต้องชำระ</div>
+            <div class="text-[17px] font-bold tabular-nums text-expense">{{ formatMoney(bill.due) }}</div>
+          </div>
+          <div v-else class="font-semibold text-income">✓ ชำระครบแล้ว</div>
         </section>
         <NuxtLink v-if="credit" :to="`/tx/new?type=transfer&to=${id}`" class="btn btn-block mt-2.5">💳 ชำระบัตร</NuxtLink>
 

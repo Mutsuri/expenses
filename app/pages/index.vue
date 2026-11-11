@@ -65,7 +65,7 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
 
         <NuxtLink v-if="others.length" to="/dashboard" class="card mt-2.5 block transition-colors hover:bg-card-2" :class="{ 'pb-3': cards.length }">
           <div class="flex items-center justify-between text-[13px] text-muted">
-            <span>📊 ภาพรวมทุกบัญชีรอบนี้</span>
+            <span>📊 ภาพรวมรอบนี้</span>
             <span class="text-xl leading-none">›</span>
           </div>
           <div class="mt-0.5 text-[22px] font-bold tabular-nums">฿{{ formatMoney(totalBalance) }}</div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// ภาพรวมทุกบัญชี (ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต) ในรอบที่เลือก: ยอดรวม รับ-จ่ายรวม และของแต่ละบัญชี
-// เงินที่โอนมาจากบัญชีรับเงินเดือนนับเป็นรายรับหมวดเงินเดือน
+// ภาพรวมในรอบที่เลือก แยกสองมุมมอง
+// บัญชี: ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต (เงินที่โอนมาจากบัญชีรับเงินเดือนนับเป็นรายรับหมวดเงินเดือน)
+// บัตรเครดิต: ยอดใช้ไปและ CashBack ของบัตรทุกใบ
 import { bankById } from '#shared/utils/banks'
 import { cycleOf, shiftCycle, todayISO } from '#shared/utils/cycle'
 import { formatDay, formatMoney } from '#shared/utils/format'
@@ -13,12 +14,16 @@ const { state, cycleSettings } = useStore()
 const cycleKey = ref(cycleOf(todayISO(), cycleSettings.value).key)
 const cycle = computed(() => shiftCycle(cycleKey.value, 0, cycleSettings.value))
 const salaryIds = computed(() => new Set(state.accounts.filter((a) => a.salary).map((a) => a.id)))
-const accounts = computed(() => state.accounts.filter(inOverview))
-const data = computed(() => overview(accounts.value, state.transactions, cycle.value, salaryIds.value))
+
+const creditAccounts = computed(() => state.accounts.filter(isCredit))
+// มีบัตรเครดิตถึงจะมีปุ่มสลับ
+const view = ref<'bank' | 'credit'>('bank')
+watch(creditAccounts, (c) => !c.length && (view.value = 'bank'))
+const viewAccounts = computed(() => (view.value === 'credit' ? creditAccounts.value : state.accounts.filter(inOverview)))
+const data = computed(() => overview(viewAccounts.value, state.transactions, cycle.value, salaryIds.value))
 const breakdownType = ref<'expense' | 'income'>('expense')
-// บัตรเครดิตแสดงแยก: ยอดใช้ไปของแต่ละบัตรในรอบที่เลือก
-const cards = computed(() => overview(state.accounts.filter(isCredit), state.transactions, cycle.value).rows)
-const cardsTotal = computed(() => cards.value.reduce((s, r) => s + r.summary.expense, 0))
+watch(view, () => (breakdownType.value = 'expense'))
+
 // แตะบัตรเพื่อขยายดูรายการในรอบนี้ (ดูอย่างเดียว) ใหม่สุดก่อน
 const openCards = ref(new Set<string>())
 function toggleCard(id: string) {
@@ -34,7 +39,7 @@ const cardItems = (id: string) =>
 const plansOf = (id: string) => activePlans(state.transactions, id, todayISO())
 // รายการในหมวดที่แตะขยาย: นับแบบเดียวกับยอดรวม (groupCategoryOf)
 function itemsFor(type: TxType, category: string) {
-  const ids = new Set(accounts.value.map((a) => a.id))
+  const ids = new Set(viewAccounts.value.map((a) => a.id))
   return inCycle(state.transactions, cycle.value).filter((t) => {
     const c = groupCategoryOf(t, ids, salaryIds.value)
     return c?.type === type && c.category === category
@@ -44,15 +49,28 @@ function itemsFor(type: TxType, category: string) {
 
 <template>
   <main class="page page-wide">
-    <TopBar title="ภาพรวมทุกบัญชี" back="/" />
+    <TopBar title="ภาพรวม" back="/" />
 
     <!-- มือถือ: ยอดรวม → แต่ละบัญชี → แยกตามหมวด / จอกว้าง: ยอดรวมกับหมวดซ้าย แต่ละบัญชีขวา -->
     <div class="lg:grid lg:grid-cols-[400px_1fr] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-8">
       <div class="lg:col-start-1 lg:row-start-1">
+        <div v-if="creditAccounts.length" class="mb-2.5 grid grid-cols-2 rounded-[14px] bg-card-2 p-1">
+          <button
+            v-for="t in [{ key: 'bank', label: '🏦 บัญชี' }, { key: 'credit', label: '💳 บัตรเครดิต' }] as const"
+            :key="t.key"
+            type="button"
+            class="rounded-[10px] p-2 font-semibold"
+            :class="view === t.key ? 'bg-card text-ink shadow-card' : 'text-muted'"
+            @click="view = t.key"
+          >
+            {{ t.label }}
+          </button>
+        </div>
+
         <CycleNav v-model="cycleKey" />
 
-        <section class="card mt-2.5">
-          <div class="text-[13px] text-muted">ยอดเงินรวมทุกบัญชี ณ สิ้นรอบ</div>
+        <section v-if="view === 'bank'" class="card mt-2.5">
+          <div class="text-[13px] text-muted">ยอดเงินรวม ณ สิ้นรอบ</div>
           <div class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ formatMoney(data.total.closing) }}</div>
           <div class="mt-3 grid grid-cols-2 gap-2.5">
             <div class="rounded-[14px] bg-income-soft px-3 py-2.5">
@@ -66,36 +84,46 @@ function itemsFor(type: TxType, category: string) {
           </div>
           <p class="mt-2 text-xs text-muted">ไม่รวมบัญชีรับเงินเดือน เงินสด และบัตรเครดิต (เงินที่โอนมาจากบัญชีรับเงินเดือนนับเป็นรายรับ) และไม่นับเงินที่โอนกันเองระหว่างบัญชีอื่น</p>
         </section>
+
+        <section v-else class="card mt-2.5 grid grid-cols-2 gap-2.5">
+          <div class="rounded-[14px] bg-expense-soft px-3 py-2.5">
+            <div class="text-[13px] text-muted">ใช้ไปรวม</div>
+            <div class="text-xl font-bold tabular-nums text-expense">{{ formatMoney(data.total.expense) }}</div>
+          </div>
+          <div class="rounded-[14px] bg-income-soft px-3 py-2.5">
+            <div class="text-[13px] text-muted">CashBack รวม</div>
+            <div class="text-xl font-bold tabular-nums text-income">{{ formatMoney(data.total.income) }}</div>
+          </div>
+        </section>
       </div>
 
       <div class="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-        <div class="section-title lg:mt-0"><span>แต่ละบัญชี ({{ data.rows.length }})</span><span>รวมเงินโอน</span></div>
-        <div class="grid gap-2.5">
-          <!-- ดูอย่างเดียว ไม่ใช่ลิงก์ (กันสับสนกับหน้าแรก) -->
-          <div v-for="r in data.rows" :key="r.account.id" class="card flex items-center gap-3">
-            <BankLogo :bank-id="r.account.bankId" />
-            <div class="min-w-0 flex-1">
-              <div class="truncate font-semibold">{{ r.account.name || bankById(r.account.bankId).name }}</div>
-              <div class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
-                <span class="text-income">รับ {{ formatMoney(r.summary.income) }}</span>
-                <span class="text-expense">จ่าย {{ formatMoney(r.summary.expense) }}</span>
+        <!-- บัญชีปกติ: ดูอย่างเดียว ไม่ใช่ลิงก์ (กันสับสนกับหน้าแรก) -->
+        <template v-if="view === 'bank'">
+          <div class="section-title lg:mt-0"><span>แต่ละบัญชี ({{ data.rows.length }})</span><span>รวมเงินโอน</span></div>
+          <div class="grid gap-2.5">
+            <div v-for="r in data.rows" :key="r.account.id" class="card flex items-center gap-3">
+              <BankLogo :bank-id="r.account.bankId" />
+              <div class="min-w-0 flex-1">
+                <div class="truncate font-semibold">{{ r.account.name || bankById(r.account.bankId).name }}</div>
+                <div class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
+                  <span class="text-income">รับ {{ formatMoney(r.summary.income) }}</span>
+                  <span class="text-expense">จ่าย {{ formatMoney(r.summary.expense) }}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-[11px] text-muted">คงเหลือ</div>
+                <div class="text-[17px] font-bold tabular-nums">{{ formatMoney(r.summary.closing) }}</div>
               </div>
             </div>
-            <div class="text-right">
-              <div class="text-[11px] text-muted">คงเหลือ</div>
-              <div class="text-[17px] font-bold tabular-nums">{{ formatMoney(r.summary.closing) }}</div>
-            </div>
           </div>
-        </div>
+        </template>
 
-        <!-- บัตรเครดิต: แยกจากยอดรวมด้านบน -->
-        <template v-if="cards.length">
-          <div class="section-title">
-            <span>บัตรเครดิต ({{ cards.length }})</span>
-            <span>ใช้ไปรวม <b class="text-expense tabular-nums">{{ formatMoney(cardsTotal) }}</b></span>
-          </div>
+        <!-- บัตรเครดิต: แตะบัตรเพื่อดูรายการที่รูดและงวดผ่อน -->
+        <template v-else>
+          <div class="section-title lg:mt-0"><span>แต่ละบัตร ({{ data.rows.length }})</span><span>แตะเพื่อดูรายการ</span></div>
           <div class="grid gap-2.5">
-            <div v-for="r in cards" :key="r.account.id" class="card">
+            <div v-for="r in data.rows" :key="r.account.id" class="card">
               <button
                 type="button"
                 class="flex w-full items-center gap-3 text-left"
@@ -153,10 +181,10 @@ function itemsFor(type: TxType, category: string) {
 
       <div class="lg:col-start-1 lg:row-start-2">
         <div class="section-title">
-          <span>แยกตามหมวด (ทุกบัญชี)</span>
+          <span>แยกตามหมวด</span>
           <span class="inline-flex rounded-[10px] bg-card-2 p-0.5">
             <button
-              v-for="t in [{ key: 'expense', label: 'จ่าย' }, { key: 'income', label: 'รับ' }] as const"
+              v-for="t in [{ key: 'expense', label: view === 'credit' ? 'ใช้ไป' : 'จ่าย' }, { key: 'income', label: view === 'credit' ? 'CashBack' : 'รับ' }] as const"
               :key="t.key"
               class="rounded-lg px-3 py-0.5 text-[13px] font-semibold"
               :class="breakdownType === t.key ? 'bg-card text-ink shadow-card' : 'text-muted'"

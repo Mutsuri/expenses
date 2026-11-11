@@ -16,6 +16,8 @@ export const CATEGORIES: Record<TxType, Category[]> = {
     { id: 'internet', name: 'เน็ตบ้าน', icon: '🌐' },
     { id: 'mobile', name: 'ค่ามือถือ', icon: '📱' },
     { id: 'food', name: 'อาหาร', icon: '🍜' },
+    // แท็กซี่ รถเมล์ MRT BTS
+    { id: 'transport', name: 'การเดินทาง', icon: '🚇' },
     { id: 'haircut', name: 'ตัดผม', icon: '💈' },
     { id: 'other-exp', name: 'อื่น ๆ', icon: '📦' },
   ],

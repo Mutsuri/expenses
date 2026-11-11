@@ -23,6 +23,8 @@ export const CATEGORIES: Record<TxType, Category[]> = {
   ],
   income: [
     { id: 'salary', name: 'เงินเดือน', icon: '💼' },
+    // รายรับของบัตรเครดิต (บัญชีอื่นไม่มีหมวดนี้ให้เลือก)
+    { id: 'cashback', name: 'CashBack', icon: '💸' },
     { id: 'bonus', name: 'โบนัส', icon: '🎉' },
     { id: 'side', name: 'รายได้เสริม', icon: '🪙' },
     { id: 'interest', name: 'ดอกเบี้ย', icon: '🏦' },
@@ -31,6 +33,8 @@ export const CATEGORIES: Record<TxType, Category[]> = {
 }
 
 /** หมวดของเงินที่โอนระหว่างบัญชี (ไม่มีให้เลือกในฟอร์ม) */
+/** เงินคืนจากบัตรเครดิต (รายรับอย่างเดียวของบัตรเครดิต) */
+export const CASHBACK = 'cashback'
 export const TRANSFER_IN = 'transfer-in'
 export const TRANSFER_OUT = 'transfer-out'
 const TRANSFER_CATEGORIES: Record<string, Category> = {

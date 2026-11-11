@@ -100,6 +100,7 @@ const cardsSpent = computed(() => cards.value.reduce((s, a) => s + a.cycle.expen
                   💼 รับเงินเดือน
                 </span>
               </div>
+              <div v-if="a.credit && a.cycle.income" class="text-[13px] tabular-nums text-income">💸 CashBack +{{ formatMoney(a.cycle.income) }}</div>
               <div v-if="!a.credit" class="flex flex-wrap gap-x-3 text-[13px] tabular-nums">
                 <span class="text-income">รับ {{ money(a, a.cycle.income) }}</span>
                 <span class="text-expense">จ่าย {{ money(a, a.cycle.expense) }}</span>

@@ -22,7 +22,8 @@ const balance = computed(() => (account.value ? balanceOf(account.value, txs.val
 const { hidden: salaryHidden } = useHideSalary()
 // บัตรเครดิต: แสดงยอดใช้ไปของรอบนี้แทนยอดคงเหลือ
 const credit = computed(() => !!account.value && isCredit(account.value))
-const spentNow = computed(() => summarize(inCycle(txs.value, cycleOf(todayISO(), cycleSettings.value)), 0, id).expense)
+const nowSummary = computed(() => summarize(inCycle(txs.value, cycleOf(todayISO(), cycleSettings.value)), 0, id))
+const spentNow = computed(() => nowSummary.value.expense)
 const cycleTxs = computed(() => inCycle(txs.value, cycle.value))
 const breakdownType = ref<'expense' | 'income'>('expense')
 
@@ -78,7 +79,9 @@ function pickCycle(key: string) {
             <div class="text-[13px] leading-4 text-muted">{{ bank.name }}<template v-if="account.last4"> · •••{{ account.last4 }}</template></div>
             <template v-if="credit">
               <div class="text-[28px] leading-[1.2] font-bold tabular-nums text-expense">฿{{ formatMoney(spentNow) }}</div>
-              <div class="mt-0.5 text-xs text-muted">ใช้ไปรอบนี้</div>
+              <div class="mt-0.5 text-xs text-muted">
+                ใช้ไปรอบนี้<template v-if="nowSummary.income"> · <span class="text-income">💸 CashBack +{{ formatMoney(nowSummary.income) }}</span></template>
+              </div>
             </template>
             <div v-else class="flex items-center gap-1">
               <span class="text-[28px] leading-[1.2] font-bold tabular-nums">฿{{ account.salary && salaryHidden ? MASK : formatMoney(balance) }}</span>

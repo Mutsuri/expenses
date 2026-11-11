@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { bankById } from '#shared/utils/banks'
-import { CATEGORIES } from '#shared/utils/categories'
+import { CASHBACK, CATEGORIES } from '#shared/utils/categories'
 import { todayISO } from '#shared/utils/cycle'
 import { formatMoney, parseMoney } from '#shared/utils/format'
 import { isCredit, type Transaction, type TxKind } from '#shared/utils/stats'
@@ -9,10 +9,12 @@ const props = defineProps<{ initial?: Transaction; accountId?: string; type?: Tx
 // months: จดเป็นรายการผ่อน (เฉพาะรายจ่ายใหม่บนบัตรเครดิต)
 const emit = defineEmits<{ save: [value: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>, months?: number] }>()
 const { state, hasSalary } = useStore()
-// ผู้ใช้ที่ไม่มีเงินเดือนไม่ต้องมีหมวดเงินเดือน
+// ผู้ใช้ที่ไม่มีเงินเดือนไม่ต้องมีหมวดเงินเดือน, รายรับของบัตรเครดิตมีแค่ CashBack
 const categories = computed(() => ({
   expense: CATEGORIES.expense,
-  income: hasSalary.value ? CATEGORIES.income : CATEGORIES.income.filter((c) => c.id !== 'salary'),
+  income: onCredit.value
+    ? CATEGORIES.income.filter((c) => c.id === CASHBACK)
+    : CATEGORIES.income.filter((c) => c.id !== CASHBACK && (hasSalary.value || c.id !== 'salary')),
 }))
 
 const salaryId = state.accounts.find((a) => a.salary)?.id
@@ -28,18 +30,18 @@ const date = ref(props.initial?.date ?? todayISO())
 const note = ref(props.initial?.note ?? '')
 const error = ref('')
 
-// บัตรเครดิตจดได้แค่รายจ่าย: ไม่มีให้เลือกตอนจดรายรับหรือโอน
+// บัตรเครดิตจดได้แค่รายจ่ายกับ CashBack: ไม่มีให้เลือกตอนโอน
 const cashAccounts = computed(() => state.accounts.filter((a) => !isCredit(a)))
-const accountOptions = computed(() => (type.value === 'expense' ? state.accounts : cashAccounts.value))
+const accountOptions = computed(() => (type.value === 'transfer' ? cashAccounts.value : state.accounts))
 const onCredit = computed(() => isCredit(state.accounts.find((a) => a.id === accountId.value) ?? { bankId: '' }))
 
-// แท็บประเภทรายการ (โอนได้เมื่อมีมากกว่าหนึ่งบัญชีที่ไม่ใช่บัตรเครดิต, บัตรเครดิตมีแค่รายจ่าย)
+// แท็บประเภทรายการ (โอนได้เมื่อมีมากกว่าหนึ่งบัญชีที่ไม่ใช่บัตรเครดิต, บัตรเครดิตมีรายจ่ายกับ CashBack)
 const tabs = computed(() =>
   [
     { type: 'expense' as const, label: 'รายจ่าย', color: 'text-expense' },
-    { type: 'income' as const, label: 'รายรับ', color: 'text-income' },
+    { type: 'income' as const, label: onCredit.value ? 'CashBack' : 'รายรับ', color: 'text-income' },
     { type: 'transfer' as const, label: 'โอน', color: 'text-accent' },
-  ].filter((t) => t.type === 'expense' || (!onCredit.value && (t.type !== 'transfer' || cashAccounts.value.length > 1))),
+  ].filter((t) => t.type !== 'transfer' || (!onCredit.value && cashAccounts.value.length > 1)),
 )
 
 const label = (a: { name: string; bankId: string; salary?: boolean }) => `${a.name} (${bankById(a.bankId).name})${a.salary ? ' 💼' : ''}`
@@ -57,9 +59,16 @@ const perMonth = computed(() => {
 
 watch(type, (t) => {
   error.value = ''
-  if (t !== 'expense' && onCredit.value) accountId.value = cashAccounts.value[0]?.id ?? ''
-  if (t !== 'transfer' && !categories.value[t].some((c) => c.id === category.value)) category.value = categories.value[t][0]!.id
+  if (t === 'transfer' && onCredit.value) accountId.value = cashAccounts.value[0]?.id ?? ''
 })
+// หมวดต้องอยู่ในรายการที่เลือกได้ (เปลี่ยนประเภท หรือสลับบัญชีระหว่างบัตรเครดิตกับบัญชีอื่น)
+watch(
+  [type, onCredit],
+  ([t]) => {
+    if (t !== 'transfer' && !categories.value[t].some((c) => c.id === category.value)) category.value = categories.value[t][0]!.id
+  },
+  { immediate: !props.initial },
+)
 // ปลายทางต้องไม่ใช่บัญชีเดียวกับต้นทาง
 watch(
   [type, accountId],

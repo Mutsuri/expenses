@@ -28,7 +28,7 @@ function toggleCard(id: string) {
 }
 const cardItems = (id: string) =>
   inCycle(state.transactions, cycle.value)
-    .filter((t) => t.accountId === id && t.type === 'expense')
+    .filter((t) => t.accountId === id && t.type !== 'transfer')
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1))
 // รายการผ่อนที่ยังมีงวดเหลือ (นับจากวันนี้ ไม่ขึ้นกับรอบที่เลือก)
 const plansOf = (id: string) => activePlans(state.transactions, id, todayISO())
@@ -103,7 +103,10 @@ function itemsFor(type: TxType, category: string) {
                 @click="toggleCard(r.account.id)"
               >
                 <BankLogo :bank-id="r.account.bankId" />
-                <div class="min-w-0 flex-1 truncate font-semibold">{{ r.account.name || bankById(r.account.bankId).name }}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="truncate font-semibold">{{ r.account.name || bankById(r.account.bankId).name }}</div>
+                  <div v-if="r.summary.income" class="text-[13px] tabular-nums text-income">💸 CashBack +{{ formatMoney(r.summary.income) }}</div>
+                </div>
                 <div class="text-right">
                   <div class="text-[11px] text-muted">ใช้ไปรอบนี้</div>
                   <div class="text-[17px] font-bold tabular-nums text-expense">{{ formatMoney(r.summary.expense) }}</div>
@@ -115,12 +118,13 @@ function itemsFor(type: TxType, category: string) {
               <div v-if="openCards.has(r.account.id)" class="mt-3 divide-y divide-line rounded-xl bg-card-2 px-3">
                 <div v-for="t in cardItems(r.account.id)" :key="t.id" class="flex items-center gap-3 py-2 text-sm">
                   <span class="w-14 flex-none text-[13px] text-muted">{{ formatDay(t.date) }}</span>
-                  <span class="flex-none text-lg">{{ categoryById('expense', t.category).icon }}</span>
+                  <span class="flex-none text-lg">{{ categoryById(t.type as TxType, t.category).icon }}</span>
                   <div class="min-w-0 flex-1">
-                    <div class="truncate">{{ t.note || categoryById('expense', t.category).name }}</div>
-                    <div v-if="t.note" class="truncate text-xs text-muted">{{ categoryById('expense', t.category).name }}</div>
+                    <div class="truncate">{{ t.note || categoryById(t.type as TxType, t.category).name }}</div>
+                    <div v-if="t.note" class="truncate text-xs text-muted">{{ categoryById(t.type as TxType, t.category).name }}</div>
                   </div>
-                  <span class="flex-none tabular-nums">{{ formatMoney(t.amount) }}</span>
+                  <!-- CashBack เป็นเงินเข้า -->
+                  <span class="flex-none tabular-nums" :class="{ 'text-income': t.type === 'income' }">{{ t.type === 'income' ? '+' : '' }}{{ formatMoney(t.amount) }}</span>
                 </div>
                 <p v-if="!cardItems(r.account.id).length" class="py-3 text-center text-sm text-muted">ยังไม่มีรายการในรอบนี้</p>
               </div>

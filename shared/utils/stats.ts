@@ -1,4 +1,4 @@
-import { CARD_PAY, TRANSFER_IN, TRANSFER_OUT, type TxType } from './categories'
+import { CARD_FUND, CARD_PAY, TRANSFER_IN, TRANSFER_OUT, type TxType } from './categories'
 import type { Cycle } from './cycle'
 
 export interface Account {
@@ -44,13 +44,31 @@ export interface CycleSummary {
   net: number
   /** ยอดคงเหลือ ณ วันสุดท้ายของรอบ */
   closing: number
-  /** ชำระบัตรเครดิต (ไม่อยู่ในรายรับ/รายจ่าย): ติดลบ = จ่ายออกจากบัญชีนี้, บวก = บัตรนี้ได้รับชำระ */
+  /** บัตรเครดิตได้รับชำระ (ไม่ใช่รายรับของบัตร) ฝั่งบัญชีที่จ่ายนับเป็นรายจ่ายหมวดชำระบัตรแทน */
   cardPay: number
   byCategory: { type: TxType; category: string; amount: number }[]
 }
 
 /** โอนไปจ่ายบัตรเครดิต */
-export const isCardPay = (t: Pick<Transaction, 'type' | 'category'>) => t.type === 'transfer' && t.category === CARD_PAY
+export const isCardPay = (t: Pick<Transaction, 'type' | 'category'>) => t.type === 'transfer' && t.category.startsWith(CARD_PAY)
+
+/** โอนระหว่างบัญชีเพื่อเอาไปจ่ายบัตร (นับรอบเดียวกับบิล) */
+export const isCardFund = (t: Pick<Transaction, 'type' | 'category'>) => t.type === 'transfer' && t.category.startsWith(CARD_FUND)
+
+/**
+ * วันที่ใช้จัดรายการเข้ารอบ: ชำระบัตร (และเงินที่โอนมาจ่ายบัตร)นับเป็นวันที่ 10 ของเดือนที่สรุปยอด (กลางรอบบัตร 26–25)
+ * ให้อยู่รอบเดียวกับที่รูดบัตร ไม่ใช่รอบที่จ่าย. รายการเก่าที่ไม่ได้เก็บวันสรุปยอด:
+ * จ่ายวันที่ 1–15 = บิลเดือนก่อน, วันที่ 16 ขึ้นไป = บิลเดือนนี้
+ */
+export function txDate(t: Transaction): string {
+  if (!isCardPay(t) && !isCardFund(t)) return t.date
+  let statement = t.category.split('@')[1]
+  if (!statement) {
+    const [y, m, d] = t.date.split('-').map(Number) as [number, number, number]
+    statement = new Date(Date.UTC(y, d <= 15 ? m - 2 : m - 1, 25)).toISOString().slice(0, 10)
+  }
+  return `${statement.slice(0, 8)}10`
+}
 
 /** รายการนี้เกี่ยวกับบัญชีนี้ไหม (รวมเป็นปลายทางการโอน) */
 export const involves = (t: Transaction, accountId: string) => t.accountId === accountId || t.toAccountId === accountId
@@ -75,7 +93,10 @@ export function balanceOf(account: Account, txs: Transaction[], upTo?: string): 
 }
 
 export function inCycle(txs: Transaction[], c: Pick<Cycle, 'start' | 'end'>): Transaction[] {
-  return txs.filter((t) => t.date >= c.start && t.date <= c.end)
+  return txs.filter((t) => {
+    const d = txDate(t)
+    return d >= c.start && d <= c.end
+  })
 }
 
 /**
@@ -102,8 +123,13 @@ export function summarize(
   for (const t of txs) {
     if (t.type === 'transfer') {
       if (!accountId) continue
-      if (isCardPay(t)) {
-        cardPay += signedFor(t, accountId)
+      if (isCardPay(t) && t.toAccountId === accountId) {
+        cardPay += t.amount
+        continue
+      }
+      if (isCardPay(t) && t.accountId === accountId) {
+        expense += t.amount
+        addCat('expense', CARD_PAY, t.amount)
         continue
       }
       if (t.accountId === accountId) {
@@ -161,8 +187,9 @@ export function groupCategoryOf(
   ids: ReadonlySet<string>,
   salaryIds: ReadonlySet<string> = new Set(),
 ): { type: TxType; category: string } | null {
-  if (isCardPay(t)) return null
   const fromIn = ids.has(t.accountId)
+  // ชำระบัตร: รายจ่ายของกลุ่มที่จ่าย, ไม่ใช่รายรับของกลุ่มบัตร
+  if (isCardPay(t)) return fromIn && !ids.has(t.toAccountId ?? '') ? { type: 'expense', category: CARD_PAY } : null
   if (t.type !== 'transfer') return fromIn ? { type: t.type, category: t.category } : null
   const toIn = !!t.toAccountId && ids.has(t.toAccountId)
   if (fromIn && !toIn) return { type: 'expense', category: TRANSFER_OUT }

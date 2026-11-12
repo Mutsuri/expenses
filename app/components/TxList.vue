@@ -2,7 +2,7 @@
 import { bankById } from '#shared/utils/banks'
 import { categoryById } from '#shared/utils/categories'
 import { formatMoney, formatWeekday } from '#shared/utils/format'
-import { groupByDay, isCardPay, signedFor, type Transaction } from '#shared/utils/stats'
+import { groupByDay, isCardFund, isCardPay, signedFor, type Transaction } from '#shared/utils/stats'
 
 // accountId = บัญชีที่กำลังดู ใช้บอกว่าการโอนเป็นเข้าหรือออก, filtered = มีตัวกรองอยู่ (ข้อความตอนไม่มีรายการ)
 const props = defineProps<{ items: Transaction[]; accountId: string; filtered?: boolean }>()
@@ -19,13 +19,23 @@ function view(t: Transaction): { icon: string; title: string; sub: string; peer?
   if (t.type === 'transfer') {
     const out = t.accountId === props.accountId
     const peer = accountName(out ? t.toAccountId : t.accountId)
-    // ชำระบัตรเครดิต: ไม่ใช่รายรับ/รายจ่าย (สีกลาง)
+    // ชำระบัตรเครดิต: รายจ่ายของบัญชีที่จ่าย, ฝั่งบัตรไม่ใช่รายรับ (สีกลาง)
     if (isCardPay(t)) {
-      return { icon: '💳', title: t.note || (out ? `ชำระบัตร ${peer}` : `รับชำระจาก ${peer}`), sub: out ? 'ชำระบัตร ·' : 'รับชำระ · จาก', peer, color: '' }
+      return { icon: '💳', title: t.note || (out ? `ชำระบัตร ${peer}` : `รับชำระจาก ${peer}`), sub: out ? 'ชำระบัตร ·' : 'รับชำระ · จาก', peer, color: out ? 'text-expense' : '' }
     }
     // รับโอนจากบัญชีรับเงินเดือน = เงินเดือน
     if (!out && state.accounts.find((a) => a.id === t.accountId)?.salary) {
-      return { icon: '💼', title: t.note || 'เงินเดือน', sub: 'เงินเดือน · จาก', peer, color: 'text-income' }
+      return { icon: '💼', title: t.note || 'เงินเดือน', sub: isCardFund(t) ? 'เงินเดือน (ไว้จ่ายบัตร) · จาก' : 'เงินเดือน · จาก', peer, color: 'text-income' }
+    }
+    // โอนไว้จ่ายบัตร: ระบุไว้ในบรรทัดล่าง
+    if (isCardFund(t)) {
+      return {
+        icon: '🔁',
+        title: t.note || (out ? `โอนไป ${peer}` : `รับโอนจาก ${peer}`),
+        sub: out ? 'โอนไว้จ่ายบัตร · ไป' : 'รับโอนไว้จ่ายบัตร · จาก',
+        peer,
+        color: out ? 'text-expense' : 'text-income',
+      }
     }
     // รับโอน = รายรับ, โอนออก = รายจ่าย
     return {

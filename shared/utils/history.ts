@@ -1,5 +1,5 @@
 // สรุปแต่ละรอบของบัญชี เงินคงเหลือยกไปรอบถัดไปอัตโนมัติ
-// คงเหลือ = ยกมาจากรอบก่อน + ยอดเริ่มต้นบัญชี (เฉพาะรอบแรก) + รายรับ (รวมรับโอน) − รายจ่าย (รวมโอนออก) ± ชำระบัตรเครดิต
+// คงเหลือ = ยกมาจากรอบก่อน + ยอดเริ่มต้นบัญชี (เฉพาะรอบแรก) + รายรับ (รวมรับโอน) − รายจ่าย (รวมโอนออก) (+ ชำระบัตรที่บัตรได้รับ)
 
 import { cycleOf, shiftCycle, toISO, type Cycle, type CycleSettings } from './cycle'
 import { inCycle, involves, summarize, type Account, type CycleSummary, type Transaction } from './stats'

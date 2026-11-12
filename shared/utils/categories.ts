@@ -37,11 +37,17 @@ export const CATEGORIES: Record<TxType, Category[]> = {
 export const CASHBACK = 'cashback'
 export const TRANSFER_IN = 'transfer-in'
 export const TRANSFER_OUT = 'transfer-out'
-/** โอนจากบัญชีไปจ่ายบัตรเครดิต: ไม่นับเป็นรายรับหรือรายจ่าย (นับไปแล้วตอนรูดบัตร) */
+/**
+ * โอนจากบัญชีไปจ่ายบัตรเครดิต: เป็นรายจ่ายของบัญชีที่จ่าย นับในรอบเดียวกับที่รูดบัตร (ไม่ใช่รอบที่จ่าย)
+ * เก็บเป็น 'card-pay@YYYY-MM-DD' = วันสรุปยอดของบิลที่จ่าย
+ */
 export const CARD_PAY = 'card-pay'
+/** โอนระหว่างบัญชีเพื่อเอาไปจ่ายบัตร: ยังเป็นการโอนปกติ แต่นับรอบเดียวกับบิล 'card-fund@YYYY-MM-DD' */
+export const CARD_FUND = 'card-fund'
 const TRANSFER_CATEGORIES: Record<string, Category> = {
   [TRANSFER_IN]: { id: TRANSFER_IN, name: 'รับโอน', icon: '🔁' },
   [TRANSFER_OUT]: { id: TRANSFER_OUT, name: 'โอนออก', icon: '🔁' },
+  [CARD_PAY]: { id: CARD_PAY, name: 'ชำระบัตรเครดิต', icon: '💳' },
 }
 
 export function categoryById(type: TxType, id: string): Category {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseMoney, formatMoney } from '../shared/utils/format'
-import { balanceOf, cardDebt, groupByDay, groupCategoryOf, inOverview, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
+import { balanceOf, cardDebt, groupByDay, groupCategoryOf, inCycle, txDate, inOverview, overview, summarize, type Account, type Transaction } from '../shared/utils/stats'
 
 const acc: Account = { id: 'a', bankId: 'kbank', name: 'หลัก', last4: '', openingBalance: 100_00, createdAt: 0, updatedAt: 0 }
 const tx = (p: Partial<Transaction>): Transaction => ({
@@ -170,17 +170,28 @@ describe('credit card payment', () => {
     tx({ id: '4', accountId: 'c', amount: 500_00, category: 'mall-shop', date: '2026-12-01' }),
   ]
 
-  it('is not income or expense on either side, but moves balance', () => {
+  it('is an expense of the payer, not income of the card', () => {
     const fromBank = summarize(txs, 0, 'p')
-    expect(fromBank.expense).toBe(0)
-    expect(fromBank.cardPay).toBe(-2_000_00)
+    expect(fromBank.expense).toBe(2_000_00)
+    expect(fromBank.byCategory[0]).toMatchObject({ type: 'expense', category: 'card-pay' })
     expect(balanceOf(bank, txs)).toBe(8_000_00)
     const onCard = summarize(txs.slice(0, 3), 0, 'c')
     expect(onCard).toMatchObject({ income: 150_00, expense: 3_000_00, cardPay: 2_000_00 })
   })
 
-  it('is left out of group totals', () => {
-    expect(groupCategoryOf(txs[2]!, new Set(['p']))).toBeNull()
+  it('counts as group expense of the paying side only', () => {
+    expect(groupCategoryOf(txs[2]!, new Set(['p']))).toEqual({ type: 'expense', category: 'card-pay' })
+    expect(groupCategoryOf(txs[2]!, new Set(['c']))).toBeNull()
+  })
+
+  it('falls in the cycle the card was used, not the cycle it was paid', () => {
+    const at = (category: string, date: string) => tx({ accountId: 'p', toAccountId: 'c', type: 'transfer', category, amount: 1, date })
+    expect(txDate(at('card-pay@2026-11-25', '2026-12-01'))).toBe('2026-11-10')
+    // รายการเก่าไม่มีวันสรุปยอด: จ่ายวันที่ 1–15 = บิลเดือนก่อน
+    expect(txDate(at('card-pay', '2026-12-10'))).toBe('2026-11-10')
+    expect(txDate(at('card-pay', '2026-11-26'))).toBe('2026-11-10')
+    const oct = { start: '2026-10-22', end: '2026-11-24' }
+    expect(inCycle([at('card-pay@2026-11-25', '2026-12-01')], oct)).toHaveLength(1)
   })
 
   it('tracks outstanding debt up to today', () => {

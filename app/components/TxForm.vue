@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { CARD_PAY, CASHBACK, CATEGORIES } from '#shared/utils/categories'
+import { cardFundCategory, cardPayCategory } from '#shared/utils/card'
+import { CASHBACK, CATEGORIES } from '#shared/utils/categories'
 import { todayISO } from '#shared/utils/cycle'
-import { formatMoney, parseMoney } from '#shared/utils/format'
-import { isCredit, type Transaction, type TxKind } from '#shared/utils/stats'
+import { formatDay, formatMoney, parseMoney } from '#shared/utils/format'
+import { isCardFund, isCardPay, isCredit, type Transaction, type TxKind } from '#shared/utils/stats'
 
 // toAccountId: ปลายทางการโอนเริ่มต้น (เช่น กดชำระบัตรจากหน้าบัตรเครดิต)
 const props = defineProps<{ initial?: Transaction; accountId?: string; type?: TxKind; toAccountId?: string }>()
@@ -46,6 +47,22 @@ const tabs = computed(() =>
 
 const targets = computed(() => state.accounts.filter((a) => a.id !== accountId.value))
 const toCredit = computed(() => isCredit(state.accounts.find((a) => a.id === toAccountId.value) ?? { bankId: '' }))
+// ชำระบัตร: บิลที่จ่าย (แก้รายการเดิมที่จ่ายบัตรใบเดิมคงบิลเดิมไว้)
+const keepPayCategory = computed(() => !!props.initial && isCardPay(props.initial) && props.initial.toAccountId === toAccountId.value)
+const payCategory = computed(() => {
+  if (!toCredit.value) return ''
+  if (keepPayCategory.value) return props.initial!.category
+  const card = state.accounts.find((a) => a.id === toAccountId.value)!
+  return cardPayCategory(card, state.transactions, date.value)
+})
+const payStatement = computed(() => payCategory.value.split('@')[1])
+// โอนเพื่อเอาไปจ่ายบัตร (เช่น บัญชีเงินเดือน → บัญชีรอง): นับรอบเดียวกับบิล ไม่ใช่รอบที่โอน
+const creditAccounts = computed(() => state.accounts.filter(isCredit))
+const forCard = ref(!!props.initial && isCardFund(props.initial))
+const fundCategory = computed(() =>
+  props.initial && isCardFund(props.initial) ? props.initial.category : cardFundCategory(creditAccounts.value, state.transactions, date.value),
+)
+const fundStatement = computed(() => fundCategory.value.split('@')[1])
 
 // ผ่อน: เฉพาะตอนจดรายจ่ายใหม่บนบัตรเครดิต (งวดที่สร้างแล้วแก้ทีละงวด)
 const installment = ref(false)
@@ -85,7 +102,7 @@ function submit() {
   if (type.value === 'transfer') {
     if (!toAccountId.value || toAccountId.value === accountId.value) return (error.value = 'เลือกบัญชีปลายทาง')
     return emit('save', {
-      type: 'transfer', amount: value, category: toCredit.value ? CARD_PAY : 'transfer', accountId: accountId.value, toAccountId: toAccountId.value,
+      type: 'transfer', amount: value, category: toCredit.value ? payCategory.value : forCard.value && creditAccounts.value.length ? fundCategory.value : 'transfer', accountId: accountId.value, toAccountId: toAccountId.value,
       date: date.value, note: note.value.trim(),
     })
   }
@@ -156,7 +173,18 @@ function submit() {
       <div v-if="type === 'transfer'" class="field">
         <span>ไปบัญชี</span>
         <AccountPicker v-model="toAccountId" :accounts="targets" />
-        <p v-if="toCredit" class="mx-1 mt-1.5 text-[13px] text-muted">💳 ชำระบัตรเครดิต: เงินออกจากบัญชีแต่ไม่นับเป็นรายจ่าย (นับไปแล้วตอนรูดบัตร)</p>
+        <p v-if="toCredit" class="mx-1 mt-1.5 text-[13px] text-muted">
+          💳 ชำระบิลสรุปยอด {{ payStatement ? formatDay(payStatement) : '' }} · นับเป็นรายจ่ายรอบเดียวกับที่รูดบัตร ไม่นับในรอบที่จ่าย
+        </p>
+        <template v-else-if="creditAccounts.length">
+          <label class="mt-2.5 flex cursor-pointer items-center gap-2.5">
+            <input v-model="forCard" type="checkbox" class="size-[22px] flex-none accent-accent">
+            <b>โอนไปจ่ายบัตรเครดิต</b>
+          </label>
+          <p v-if="forCard" class="mx-1 mt-1.5 text-[13px] text-muted">
+            นับเป็นรอบเดียวกับบิลสรุปยอด {{ fundStatement ? formatDay(fundStatement) : '' }} (รอบที่รูดบัตร) ไม่นับในรอบที่โอน
+          </p>
+        </template>
       </div>
       <div v-if="canInstall" class="field">
         <label class="flex cursor-pointer items-center gap-2.5">
